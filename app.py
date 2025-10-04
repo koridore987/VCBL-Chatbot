@@ -49,47 +49,61 @@ def chat():
 # 메시지 전송 API
 @app.route('/send_message', methods=['POST'])
 def send_message():
+    import openai
+    from config import OPENAI_API_KEY
+
+    openai.api_key = OPENAI_API_KEY
+
     # 세션에서 user_id 가져오기
     if 'user_id' not in session:
         return jsonify({'error': '로그인이 필요합니다'}), 401
-    
+
     user_id = session['user_id']
-    
+
     # JSON 데이터에서 메시지 추출
     data = request.get_json()
     if not data or 'message' not in data:
         return jsonify({'error': '메시지가 필요합니다'}), 400
-    
+
     message = data['message']
-    
+
     conn = sqlite3.connect('chatbot.db')
     cursor = conn.cursor()
-    
+
     try:
         # 사용자 메시지를 데이터베이스에 저장
         cursor.execute(
             "INSERT INTO message (user_id, sender, content) VALUES (?, ?, ?)",
             (user_id, 'user', message)
         )
-        
-        # 봇 답변 생성 (Echo 형태)
-        bot_reply = f"Echo: {message}"
-        
+
+        # OpenAI API 호출로 챗봇 답변 생성
+        try:
+            response = openai.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "user", "content": message}
+                ]
+            )
+            bot_reply = response.choices[0].message.content.strip()
+        except Exception as e:
+            return jsonify({'error': f'OpenAI API 오류: {str(e)}'}), 500
+
         # 봇 답변을 데이터베이스에 저장
         cursor.execute(
             "INSERT INTO message (user_id, sender, content) VALUES (?, ?, ?)",
             (user_id, 'bot', bot_reply)
         )
-        
+
         conn.commit()
-        
+
         # 봇 답변을 JSON으로 반환
         return jsonify({'reply': bot_reply})
-        
+
     except sqlite3.Error as e:
         conn.rollback()
         return jsonify({'error': '데이터베이스 오류가 발생했습니다'}), 500
-        
+
     finally:
         conn.close()
 
