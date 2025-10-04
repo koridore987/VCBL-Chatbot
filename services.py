@@ -2,7 +2,7 @@
 비즈니스 로직 서비스
 """
 import openai
-from config import OPENAI_API_KEY
+import config
 from models import DatabaseManager
 
 class ChatService:
@@ -10,7 +10,7 @@ class ChatService:
     
     def __init__(self):
         self.db_manager = DatabaseManager()
-        openai.api_key = OPENAI_API_KEY
+        openai.api_key = config.OPENAI_API_KEY
     
     def generate_response(self, user_id: int, user_message: str) -> str:
         """사용자 메시지에 대한 봇 응답 생성"""
@@ -31,7 +31,7 @@ class ChatService:
             
             # OpenAI API 호출
             response = openai.chat.completions.create(
-                model="gpt-4o-mini",
+                model=config.OPENAI_MODEL,
                 messages=messages_for_openai
             )
             

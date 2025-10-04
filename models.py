@@ -3,12 +3,13 @@
 """
 import sqlite3
 from typing import List, Tuple, Optional
+import config
 
 class DatabaseManager:
     """데이터베이스 관리 클래스"""
     
-    def __init__(self, db_path: str = 'chatbot.db'):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or config.DATABASE_PATH
     
     def get_connection(self):
         """데이터베이스 연결 반환"""
@@ -56,8 +57,11 @@ class DatabaseManager:
         finally:
             conn.close()
     
-    def get_recent_messages(self, user_id: int, limit: int = 10) -> List[Tuple[str, str]]:
+    def get_recent_messages(self, user_id: int, limit: int = None) -> List[Tuple[str, str]]:
         """최근 메시지 조회 (OpenAI 컨텍스트용)"""
+        if limit is None:
+            limit = config.MAX_RECENT_MESSAGES
+            
         conn = self.get_connection()
         cursor = conn.cursor()
         try:

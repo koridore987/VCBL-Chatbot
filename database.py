@@ -1,12 +1,13 @@
 import sqlite3
 from datetime import datetime
+import config
 
 def init_db():
     """
     데이터베이스를 초기화하고 필요한 테이블들을 생성합니다.
     """
-    # chatbot.db 데이터베이스에 연결
-    conn = sqlite3.connect('chatbot.db')
+    # config.py에서 데이터베이스 경로 가져오기
+    conn = sqlite3.connect(config.DATABASE_PATH)
     cursor = conn.cursor()
     
     try:
