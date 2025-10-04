@@ -123,7 +123,15 @@
     
     <div class="right-panel">
         <h2>챗봇</h2>
-        <div id="chat-history"></div>
+        <div id="chat-history">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="message {% if message.sender == 'user' %}user-message{% else %}bot-message{% endif %}">
+                        {{ message.content }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
         <div class="chat-input-container">
             <input type="text" id="user-input" placeholder="메시지를 입력하세요...">
             <button id="send-button">전송</button>
