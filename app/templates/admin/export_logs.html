@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>채팅 로그 내보내기</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .export-card {
+            border: 1px solid #dee2e6;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        }
+        
+        .export-option {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .export-option:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+        
+        .export-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stats-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('admin.dashboard') }}">← 대시보드</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('admin.user_management') }}">회원 관리</a>
+                <a class="nav-link" href="{{ url_for('admin.excel_upload_page') }}">일괄 등록</a>
+                <a class="nav-link" href="{{ url_for('admin.prompt_management') }}">프롬프트 관리</a>
+                <a class="nav-link" href="{{ url_for('admin.admin_logout') }}">로그아웃</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mt-4">
+        <h2 class="mb-4">채팅 로그 내보내기</h2>
+        
+        <!-- 통계 정보 -->
+        <div class="stats-box">
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <h3>{{ total_messages }}</h3>
+                    <p class="mb-0">총 메시지 수</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <h3>{{ total_users }}</h3>
+                    <p class="mb-0">총 사용자 수</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <h3>{{ total_conversations }}</h3>
+                    <p class="mb-0">총 대화 수</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 내보내기 옵션 -->
+        <div class="row">
+            <!-- 전체 로그 내보내기 -->
+            <div class="col-md-6">
+                <div class="export-card">
+                    <h4 class="mb-4">📊 전체 로그 내보내기</h4>
+                    <p class="text-muted">모든 사용자의 채팅 로그를 내보냅니다.</p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('admin.export_all_csv') }}" class="btn btn-success btn-lg">
+                            CSV로 다운로드
+                        </a>
+                        <a href="{{ url_for('admin.export_all_excel') }}" class="btn btn-primary btn-lg">
+                            Excel로 다운로드
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 특정 사용자 로그 내보내기 -->
+            <div class="col-md-6">
+                <div class="export-card">
+                    <h4 class="mb-4">👤 사용자별 로그 내보내기</h4>
+                    <form method="POST" action="{{ url_for('admin.export_user_logs') }}">
+                        <div class="mb-3">
+                            <label class="form-label">사용자 선택</label>
+                            <select class="form-select" name="user_id" required>
+                                <option value="">사용자를 선택하세요</option>
+                                {% for user in users %}
+                                <option value="{{ user[0] }}">{{ user[1] }} (메시지: {{ user[2] }}개)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">파일 형식</label>
+                            <select class="form-select" name="format" required>
+                                <option value="csv">CSV</option>
+                                <option value="excel">Excel</option>
+                            </select>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">다운로드</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 날짜 범위 로그 내보내기 -->
+        <div class="export-card">
+            <h4 class="mb-4">📅 날짜 범위 로그 내보내기</h4>
+            <form method="POST" action="{{ url_for('admin.export_date_range_logs') }}">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label">시작 날짜</label>
+                        <input type="date" class="form-control" name="start_date" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">종료 날짜</label>
+                        <input type="date" class="form-control" name="end_date" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">파일 형식</label>
+                        <select class="form-select" name="format" required>
+                            <option value="csv">CSV</option>
+                            <option value="excel">Excel</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-success w-100">다운로드</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <!-- 안내 사항 -->
+        <div class="alert alert-info">
+            <h6>📋 내보내기 파일 구조</h6>
+            <ul class="mb-0">
+                <li><strong>ID</strong>: 메시지 고유 번호</li>
+                <li><strong>사용자명</strong>: 사용자 ID</li>
+                <li><strong>챗봇 타입</strong>: 할당된 챗봇 종류</li>
+                <li><strong>발신자</strong>: user (사용자) / bot (챗봇)</li>
+                <li><strong>내용</strong>: 메시지 내용</li>
+                <li><strong>시간</strong>: 메시지 전송 시간</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

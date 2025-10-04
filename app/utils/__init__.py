@@ -11,13 +11,27 @@ def init_db():
     cursor = conn.cursor()
     
     try:
+        # chatbot_type 테이블 생성
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS chatbot_type (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                description TEXT,
+                system_prompt TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
         # user 테이블 생성
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS user (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                chatbot_type_id INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (chatbot_type_id) REFERENCES chatbot_type (id)
             )
         ''')
         
@@ -44,6 +58,23 @@ def init_db():
                 last_login DATETIME
             )
         ''')
+        
+        # 기본 챗봇 타입 생성 (없는 경우에만)
+        cursor.execute("SELECT COUNT(*) FROM chatbot_type")
+        chatbot_type_count = cursor.fetchone()[0]
+        
+        if chatbot_type_count == 0:
+            default_chatbot_types = [
+                ("기본 챗봇", "일반적인 대화를 위한 챗봇입니다.", "You are a helpful AI assistant. Please answer questions in a friendly and informative manner."),
+                ("학습 도우미", "학습을 돕는 챗봇입니다.", "You are an educational AI assistant. Help users learn by explaining concepts clearly and providing examples."),
+                ("연구 조수", "연구를 지원하는 챗봇입니다.", "You are a research assistant AI. Help users with research-related tasks, provide detailed information, and suggest relevant resources.")
+            ]
+            
+            cursor.executemany(
+                "INSERT INTO chatbot_type (name, description, system_prompt) VALUES (?, ?, ?)",
+                default_chatbot_types
+            )
+            print("기본 챗봇 타입이 생성되었습니다.")
         
         # 기본 super 관리자 생성 (없는 경우에만)
         cursor.execute("SELECT COUNT(*) FROM admin WHERE role = 'super'")

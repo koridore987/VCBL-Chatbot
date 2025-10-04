@@ -48,15 +48,15 @@ class DatabaseManager:
         finally:
             conn.close()
     
-    def create_user(self, username: str, password: str) -> int:
+    def create_user(self, username: str, password: str, chatbot_type_id: int = 1) -> int:
         """새 사용자 생성"""
         conn = self.get_connection()
         cursor = conn.cursor()
         try:
             password_hash = self.hash_password(password)
             cursor.execute(
-                "INSERT INTO user (username, password_hash) VALUES (?, ?)",
-                (username, password_hash)
+                "INSERT INTO user (username, password_hash, chatbot_type_id) VALUES (?, ?, ?)",
+                (username, password_hash, chatbot_type_id)
             )
             conn.commit()
             return cursor.lastrowid
@@ -184,5 +184,73 @@ class DatabaseManager:
         except sqlite3.Error:
             conn.rollback()
             return False
+        finally:
+            conn.close()
+    
+    def get_all_chat_logs(self) -> List[Tuple]:
+        """모든 채팅 로그 조회 (CSV/엑셀 내보내기용)"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT 
+                    m.id,
+                    u.username,
+                    c.name as chatbot_type,
+                    m.sender,
+                    m.content,
+                    m.timestamp
+                FROM message m
+                JOIN user u ON m.user_id = u.id
+                LEFT JOIN chatbot_type c ON u.chatbot_type_id = c.id
+                ORDER BY m.timestamp ASC
+            """)
+            return cursor.fetchall()
+        finally:
+            conn.close()
+    
+    def get_chat_logs_by_user(self, user_id: int) -> List[Tuple]:
+        """특정 사용자의 채팅 로그 조회"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT 
+                    m.id,
+                    u.username,
+                    c.name as chatbot_type,
+                    m.sender,
+                    m.content,
+                    m.timestamp
+                FROM message m
+                JOIN user u ON m.user_id = u.id
+                LEFT JOIN chatbot_type c ON u.chatbot_type_id = c.id
+                WHERE m.user_id = ?
+                ORDER BY m.timestamp ASC
+            """, (user_id,))
+            return cursor.fetchall()
+        finally:
+            conn.close()
+    
+    def get_chat_logs_by_date_range(self, start_date: str, end_date: str) -> List[Tuple]:
+        """날짜 범위로 채팅 로그 조회"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT 
+                    m.id,
+                    u.username,
+                    c.name as chatbot_type,
+                    m.sender,
+                    m.content,
+                    m.timestamp
+                FROM message m
+                JOIN user u ON m.user_id = u.id
+                LEFT JOIN chatbot_type c ON u.chatbot_type_id = c.id
+                WHERE DATE(m.timestamp) BETWEEN ? AND ?
+                ORDER BY m.timestamp ASC
+            """, (start_date, end_date))
+            return cursor.fetchall()
         finally:
             conn.close()

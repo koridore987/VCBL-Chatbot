@@ -42,6 +42,9 @@
             <a class="navbar-brand" href="#">관리자 대시보드</a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="{{ url_for('admin.user_management') }}">회원 관리</a>
+                <a class="nav-link" href="{{ url_for('admin.excel_upload_page') }}">일괄 등록</a>
+                <a class="nav-link" href="{{ url_for('admin.prompt_management') }}">프롬프트 관리</a>
+                <a class="nav-link" href="{{ url_for('admin.export_logs_page') }}">로그 내보내기</a>
                 <a class="nav-link" href="{{ url_for('admin.admin_management') }}">관리자 계정 관리</a>
                 <a class="nav-link" href="{{ url_for('admin.admin_logout') }}">로그아웃</a>
             </div>

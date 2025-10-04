@@ -64,8 +64,20 @@
         
         <!-- 채팅 기록 -->
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">채팅 기록 ({{ messages|length }}개 메시지)</h4>
+                <div>
+                    <form method="POST" action="{{ url_for('admin.export_user_logs') }}" class="d-inline">
+                        <input type="hidden" name="user_id" value="{{ user[0] }}">
+                        <input type="hidden" name="format" value="csv">
+                        <button type="submit" class="btn btn-success btn-sm">CSV 다운로드</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin.export_user_logs') }}" class="d-inline">
+                        <input type="hidden" name="user_id" value="{{ user[0] }}">
+                        <input type="hidden" name="format" value="excel">
+                        <button type="submit" class="btn btn-primary btn-sm">Excel 다운로드</button>
+                    </form>
+                </div>
             </div>
             <div class="card-body">
                 <div class="chat-container">
