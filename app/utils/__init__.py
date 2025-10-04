@@ -1,6 +1,6 @@
 import sqlite3
 from datetime import datetime
-import config
+from app import config
 
 def init_db():
     """
@@ -15,7 +15,9 @@ def init_db():
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS user (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         
@@ -30,6 +32,32 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES user (id)
             )
         ''')
+        
+        # admin 테이블 생성
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS admin (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                role TEXT CHECK(role IN ('super', 'admin')) NOT NULL DEFAULT 'admin',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_login DATETIME
+            )
+        ''')
+        
+        # 기본 super 관리자 생성 (없는 경우에만)
+        cursor.execute("SELECT COUNT(*) FROM admin WHERE role = 'super'")
+        super_count = cursor.fetchone()[0]
+        
+        if super_count == 0:
+            import hashlib
+            default_password = "super123"
+            password_hash = hashlib.sha256(default_password.encode()).hexdigest()
+            cursor.execute(
+                "INSERT INTO admin (username, password_hash, role) VALUES (?, ?, ?)",
+                ("super", password_hash, "super")
+            )
+            print("기본 super 관리자가 생성되었습니다. (ID: super, PW: super123)")
         
         # 변경사항 저장
         conn.commit()

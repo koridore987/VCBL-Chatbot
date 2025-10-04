@@ -2,8 +2,8 @@
 비즈니스 로직 서비스
 """
 import openai
-import config
-from models import DatabaseManager
+from app import config
+from app.models import DatabaseManager
 
 class ChatService:
     """채팅 서비스 클래스"""
