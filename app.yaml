@@ -1,0 +1,41 @@
+runtime: python39
+service: default
+
+# 환경변수 설정 (실제 배포 시 Google Cloud Console에서 설정)
+env_variables:
+  SECRET_KEY: "your-secret-key-here-change-this"
+  OPENAI_API_KEY: "your-openai-api-key-here"
+  FLASK_ENV: "production"
+
+# 자동 스케일링 설정
+automatic_scaling:
+  min_instances: 1
+  max_instances: 10
+  target_cpu_utilization: 0.6
+
+# 요청 처리 설정
+handlers:
+- url: /.*
+  script: auto
+  secure: always
+
+# 리소스 설정
+resources:
+  cpu: 1
+  memory_gb: 0.5
+  disk_size_gb: 10
+
+# 헬스체크 설정
+readiness_check:
+  path: "/_ah/health"
+  check_interval_sec: 5
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+
+liveness_check:
+  path: "/_ah/health"
+  check_interval_sec: 30
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
