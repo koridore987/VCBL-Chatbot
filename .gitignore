@@ -161,3 +161,9 @@ Thumbs.db
 
 # user
 config.py
+
+# cursor
+.cursor/
+.cursor/rules/
+.cursor/rules/project-structure.mdc
+.cursor/rules/project-structure.mdc
