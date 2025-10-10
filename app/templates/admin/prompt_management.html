@@ -1,52 +1,8 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>프롬프트 관리</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .prompt-card {
-            border: 1px solid #dee2e6;
-            border-radius: 10px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            transition: all 0.3s ease;
-        }
-        
-        .prompt-card:hover {
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .prompt-preview {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 0.9rem;
-            max-height: 100px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        
-        .badge-usage {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('admin.dashboard') }}">← 대시보드</a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('admin.user_management') }}">회원 관리</a>
-                <a class="nav-link" href="{{ url_for('admin.admin_management') }}">관리자 계정</a>
-                <a class="nav-link" href="{{ url_for('admin.admin_logout') }}">로그아웃</a>
-            </div>
-        </div>
-    </nav>
-    
-    <div class="container mt-4">
+{% extends 'admin/base.html' %}
+
+{% block title %}프롬프트 관리{% endblock %}
+
+{% block content %}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>프롬프트 관리</h2>
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
@@ -174,9 +130,9 @@
                 </div>
             </div>
         </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
+
+{% block extra_js %}
     <script>
         let currentEditId = null;
         
@@ -218,6 +174,5 @@
             }
         }
     </script>
-</body>
-</html>
+{% endblock %}
 

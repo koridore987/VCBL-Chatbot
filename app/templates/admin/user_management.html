@@ -1,53 +1,8 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>회원 관리</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .user-card {
-            border: 1px solid #dee2e6;
-            border-radius: 10px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            transition: all 0.3s ease;
-        }
-        
-        .user-card:hover {
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transform: translateY(-2px);
-        }
-        
-        .badge-active {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        }
-        
-        .badge-inactive {
-            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-        }
-        
-        .stats-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('admin.dashboard') }}">← 대시보드</a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('admin.admin_management') }}">관리자 계정 관리</a>
-                <a class="nav-link" href="{{ url_for('admin.admin_logout') }}">로그아웃</a>
-            </div>
-        </div>
-    </nav>
-    
-    <div class="container mt-4">
+{% extends 'admin/base.html' %}
+
+{% block title %}회원 관리{% endblock %}
+
+{% block content %}
         <h2 class="mb-4">회원 관리</h2>
         
         <!-- 통계 카드 -->
@@ -126,9 +81,9 @@
                 {% endif %}
             </div>
         </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
+
+{% block extra_js %}
     <script>
         function deleteUser(userId, username) {
             if (confirm(`정말로 회원 '${username}'를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
@@ -144,5 +99,4 @@
             }
         }
     </script>
-</body>
-</html>
+{% endblock %}
