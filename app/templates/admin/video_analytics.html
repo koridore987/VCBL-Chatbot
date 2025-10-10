@@ -1,0 +1,618 @@
+{% extends "admin/base.html" %}
+
+{% block title %}비디오 분석 대시보드{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">비디오 분석 대시보드</h2>
+                    <p class="text-muted mb-0">학습자 시청 패턴 및 구간별 분석</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin.video_management') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> 동영상 목록으로
+                    </a>
+                </div>
+            </div>
+
+            <!-- 분석 선택 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line"></i> 분석 대상 선택
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('admin.video_analytics') }}">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="video_id">동영상 선택</label>
+                                    <select class="form-control" id="video_id" name="video_id" required>
+                                        <option value="">동영상을 선택하세요</option>
+                                        {% for video in videos %}
+                                        <option value="{{ video[0] }}" {% if selected_video and selected_video[0] == video[0] %}selected{% endif %}>
+                                            {{ video[1] }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="user_id">학습자 선택 (선택사항)</label>
+                                    <select class="form-control" id="user_id" name="user_id">
+                                        <option value="">전체 학습자</option>
+                                        {% for user in users %}
+                                        <option value="{{ user[0] }}" {% if selected_user and selected_user[0] == user[0] %}selected{% endif %}>
+                                            {{ user[1] }} ({{ user[2] }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-search"></i> 분석 실행
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if selected_video %}
+            <!-- 전체 통계 -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ overall_stats.unique_viewers }}</h4>
+                                    <p class="mb-0">총 시청자</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-users fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ overall_stats.total_activities }}</h4>
+                                    <p class="mb-0">총 활동 수</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-chart-bar fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ "%.1f"|format(overall_stats.avg_watch_time / 60) }}분</h4>
+                                    <p class="mb-0">평균 시청 시간</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-clock fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0">{{ segment_stats|length }}</h4>
+                                    <p class="mb-0">활성 구간</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-list fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 구간별 통계 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie"></i> 구간별 시청 통계
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if segment_stats %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>구간 이름</th>
+                                        <th>총 시청 횟수</th>
+                                        <th>평균 시청 시간</th>
+                                        <th>탐색 횟수</th>
+                                        <th>되감기 횟수</th>
+                                        <th>어려움 지수</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for segment in segment_stats %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ segment[0] or '미분류' }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ segment[1] }}회</span>
+                                        </td>
+                                        <td>
+                                            <span class="text-muted">{{ "%.1f"|format(segment[2] / 60) }}분</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ segment[3] }}회</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-warning">{{ segment[4] }}회</span>
+                                        </td>
+                                        <td>
+                                            {% set difficulty = (segment[4] / segment[1] * 100) if segment[1] > 0 else 0 %}
+                                            {% if difficulty > 30 %}
+                                                <span class="badge bg-danger">높음 ({{ "%.1f"|format(difficulty) }}%)</span>
+                                            {% elif difficulty > 15 %}
+                                                <span class="badge bg-warning">보통 ({{ "%.1f"|format(difficulty) }}%)</span>
+                                            {% else %}
+                                                <span class="badge bg-success">낮음 ({{ "%.1f"|format(difficulty) }}%)</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">구간별 데이터가 없습니다</h5>
+                            <p class="text-muted">학습자가 동영상을 시청하면 구간별 통계가 표시됩니다.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 개별 학습자 분석 -->
+            {% if selected_user and navigation_analysis %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-chart"></i> {{ selected_user[1] }}님의 시청 패턴 분석
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-primary">{{ navigation_analysis.navigation_intensity }}</h4>
+                                <p class="mb-0">총 탐색 횟수</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-success">{{ navigation_analysis.forward_seeks }}</h4>
+                                <p class="mb-0">앞으로 탐색</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-warning">{{ navigation_analysis.backward_seeks }}</h4>
+                                <p class="mb-0">뒤로 탐색</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-info">{{ "%.1f"|format(navigation_analysis.total_seek_distance / 60) }}분</h4>
+                                <p class="mb-0">총 탐색 거리</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 탐색 이벤트 타임라인 -->
+                    {% if navigation_analysis.seek_events %}
+                    <h6>탐색 이벤트 타임라인</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>시간</th>
+                                    <th>탐색 방향</th>
+                                    <th>거리</th>
+                                    <th>시작 시점</th>
+                                    <th>도착 시점</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for event in navigation_analysis.seek_events[:10] %}
+                                <tr>
+                                    <td>{{ event.time[:19] }}</td>
+                                    <td>
+                                        {% if event.direction == 'forward' %}
+                                            <span class="badge bg-success">앞으로</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">뒤로</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ "%.1f"|format(event.distance) }}초</td>
+                                    <td>{{ "%.1f"|format(event.from_time) }}초</td>
+                                    <td>{{ "%.1f"|format(event.to_time) }}초</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 연속적인 그라데이션 히트맵 -->
+            {% if continuous_heatmap %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-fire"></i> 연속적인 시청 히트맵
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="continuous-heatmap-container">
+                        <div class="heatmap-timeline" id="heatmap-timeline">
+                            {% for data in continuous_heatmap %}
+                            <div class="heatmap-pixel" 
+                                 data-time="{{ data.time_second }}"
+                                 data-frequency="{{ data.frequency }}"
+                                 data-heat-level="{{ data.heat_level }}"
+                                 data-percentage="{{ data.percentage }}"
+                                 style="background-color: rgba(255, 0, 0, {{ data.heat_level }}); 
+                                        left: {{ data.percentage }}%; 
+                                        width: {{ 100 / continuous_heatmap|length }}%;">
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="heatmap-labels">
+                            <span>0초</span>
+                            <span>{{ continuous_heatmap|length - 1 }}초</span>
+                        </div>
+                        <!-- 호버 정보 툴팁 -->
+                        <div class="heatmap-tooltip" id="heatmap-tooltip">
+                            <div class="tooltip-content">
+                                <div class="tooltip-time" id="tooltip-time">0초</div>
+                                <div class="tooltip-frequency" id="tooltip-frequency">0회 시청</div>
+                                <div class="tooltip-percentage" id="tooltip-percentage">위치: 0%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <span style="background-color: rgba(255, 0, 0, 0.2); padding: 2px 5px; margin-right: 10px;">낮음</span>
+                            <span style="background-color: rgba(255, 0, 0, 0.5); padding: 2px 5px; margin-right: 10px;">보통</span>
+                            <span style="background-color: rgba(255, 0, 0, 0.8); padding: 2px 5px;">높음</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+/* 기존 히트맵 스타일 */
+.heatmap-container, .detailed-heatmap-container {
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.heatmap-segment:hover {
+    border: 2px solid #007bff !important;
+    transform: scale(1.1);
+    transition: all 0.2s;
+}
+
+/* 연속적인 그라데이션 히트맵 */
+.continuous-heatmap-container {
+    width: 100%;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.heatmap-timeline {
+    position: relative;
+    height: 40px;
+    background: linear-gradient(to right, #f8f9fa, #e9ecef);
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    overflow: hidden;
+    cursor: crosshair;
+}
+
+.heatmap-pixel {
+    position: absolute;
+    height: 100%;
+    top: 0;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border-radius: 2px;
+}
+
+.heatmap-pixel:hover {
+    border: 2px solid #007bff;
+    z-index: 10;
+    transform: scaleY(1.3);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.heatmap-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+/* 툴팁 스타일 */
+.heatmap-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.heatmap-tooltip.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.tooltip-content {
+    text-align: center;
+}
+
+.tooltip-time {
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 2px;
+}
+
+.tooltip-frequency {
+    color: #ff6b6b;
+    font-weight: 500;
+}
+
+.tooltip-percentage {
+    color: #74c0fc;
+    font-size: 0.7rem;
+}
+
+/* 분포 그래프 */
+.distribution-chart-container {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.chart-bars {
+    display: flex;
+    align-items: flex-end;
+    height: 200px;
+    background: linear-gradient(to top, #f8f9fa, #e9ecef);
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.chart-bar {
+    position: relative;
+    background: linear-gradient(to top, #007bff, #0056b3);
+    border-radius: 2px 2px 0 0;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.chart-bar:hover {
+    background: linear-gradient(to top, #0056b3, #004085);
+    transform: scaleY(1.05);
+    z-index: 10;
+}
+
+.bar-value {
+    position: absolute;
+    top: -20px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: #007bff;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.chart-bar:hover .bar-value {
+    opacity: 1;
+}
+
+.chart-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+.chart-label {
+    text-align: center;
+    transform: rotate(-45deg);
+    transform-origin: center;
+    white-space: nowrap;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .heatmap-timeline {
+        height: 20px;
+    }
+    
+    .chart-bars {
+        height: 150px;
+    }
+    
+    .chart-label {
+        font-size: 0.6rem;
+    }
+}
+
+/* 애니메이션 */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.continuous-heatmap-container,
+.distribution-chart-container {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* 그라데이션 효과 */
+.heatmap-pixel {
+    background: linear-gradient(45deg, 
+        rgba(255, 0, 0, 0.1), 
+        rgba(255, 0, 0, 0.3), 
+        rgba(255, 0, 0, 0.6), 
+        rgba(255, 0, 0, 0.9)
+    );
+}
+
+.chart-bar {
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const heatmapTimeline = document.getElementById('heatmap-timeline');
+    const tooltip = document.getElementById('heatmap-tooltip');
+    const tooltipTime = document.getElementById('tooltip-time');
+    const tooltipFrequency = document.getElementById('tooltip-frequency');
+    const tooltipPercentage = document.getElementById('tooltip-percentage');
+
+    if (heatmapTimeline && tooltip) {
+        // 모든 히트맵 픽셀에 이벤트 리스너 추가
+        const pixels = heatmapTimeline.querySelectorAll('.heatmap-pixel');
+        
+        pixels.forEach(pixel => {
+            pixel.addEventListener('mouseenter', function(e) {
+                const time = this.getAttribute('data-time');
+                const frequency = this.getAttribute('data-frequency');
+                const percentage = this.getAttribute('data-percentage');
+                
+                // 툴팁 내용 업데이트
+                tooltipTime.textContent = `${time}초`;
+                tooltipFrequency.textContent = `${frequency}회 시청`;
+                tooltipPercentage.textContent = `위치: ${parseFloat(percentage).toFixed(1)}%`;
+                
+                // 툴팁 위치 계산
+                const rect = heatmapTimeline.getBoundingClientRect();
+                const pixelRect = this.getBoundingClientRect();
+                const tooltipRect = tooltip.getBoundingClientRect();
+                
+                let left = pixelRect.left - rect.left + (pixelRect.width / 2) - (tooltipRect.width / 2);
+                let top = pixelRect.top - rect.top - tooltipRect.height - 10;
+                
+                // 경계 체크
+                if (left < 0) left = 0;
+                if (left + tooltipRect.width > rect.width) {
+                    left = rect.width - tooltipRect.width;
+                }
+                if (top < 0) {
+                    top = pixelRect.bottom - rect.top + 10;
+                }
+                
+                // 툴팁 위치 설정 및 표시
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = top + 'px';
+                tooltip.classList.add('show');
+            });
+            
+            pixel.addEventListener('mouseleave', function() {
+                tooltip.classList.remove('show');
+            });
+        });
+        
+        // 타임라인 전체에 마우스 이동 이벤트 추가 (빈 공간 호버)
+        heatmapTimeline.addEventListener('mousemove', function(e) {
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const percentage = (x / rect.width) * 100;
+            const totalDuration = {{ continuous_heatmap|length - 1 if continuous_heatmap else 480 }};
+            const time = Math.round((percentage / 100) * totalDuration);
+            
+            // 툴팁 내용 업데이트 (빈 공간)
+            tooltipTime.textContent = `${time}초`;
+            tooltipFrequency.textContent = '0회 시청';
+            tooltipPercentage.textContent = `위치: ${percentage.toFixed(1)}%`;
+            
+            // 툴팁 위치 설정
+            const tooltipRect = tooltip.getBoundingClientRect();
+            let left = x - (tooltipRect.width / 2);
+            let top = -tooltipRect.height - 10;
+            
+            // 경계 체크
+            if (left < 0) left = 0;
+            if (left + tooltipRect.width > rect.width) {
+                left = rect.width - tooltipRect.width;
+            }
+            
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+            tooltip.classList.add('show');
+        });
+        
+        heatmapTimeline.addEventListener('mouseleave', function() {
+            tooltip.classList.remove('show');
+        });
+    }
+});
+</script>
+{% endblock %}

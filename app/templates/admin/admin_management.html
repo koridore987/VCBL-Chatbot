@@ -3,33 +3,11 @@
 {% block title %}관리자 계정 관리{% endblock %}
 
 {% block content %}
-        <h2 class="mb-4">관리자 계정 관리</h2>
-        
-        <!-- 새 관리자 생성 폼 -->
-        <div class="create-admin-form">
-            <h4 class="mb-3">새 관리자 생성</h4>
-            <form method="POST" action="{{ url_for('admin.create_admin') }}">
-                <div class="row">
-                    <div class="col-md-4">
-                        <label for="username" class="form-label">사용자명</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="password" class="form-label">비밀번호</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="role" class="form-label">권한</label>
-                        <select class="form-select" id="role" name="role">
-                            <option value="admin">Admin</option>
-                            <option value="super">Super</option>
-                        </select>
-                    </div>
-                    <div class="col-md-1 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary">생성</button>
-                    </div>
-                </div>
-            </form>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">관리자 계정 관리</h2>
+            <div>
+                <a href="{{ url_for('admin.create_admin_page') }}" class="btn btn-primary">새 관리자 생성</a>
+            </div>
         </div>
         
         <!-- 관리자 목록 -->
@@ -67,7 +45,7 @@
                                             onclick="changePassword({{ admin[0] }}, '{{ admin[1] }}')">
                                         비밀번호 변경
                                     </button>
-                                    {% if admin[2] != 'super' or admins|length > 1 %}
+                                    {% if admin[2] != 'super' %}
                                     <button type="button" class="btn btn-sm btn-outline-danger" 
                                             onclick="deleteAdmin({{ admin[0] }}, '{{ admin[1] }}')">
                                         삭제

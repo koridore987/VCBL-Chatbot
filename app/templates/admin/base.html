@@ -213,11 +213,43 @@
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('admin.dashboard') }}">관리자 대시보드</a>
             <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('admin.user_management') }}">회원 관리</a>
-                <a class="nav-link" href="{{ url_for('admin.excel_upload_page') }}">일괄 등록</a>
-                <a class="nav-link" href="{{ url_for('admin.prompt_management') }}">프롬프트 관리</a>
-                <a class="nav-link" href="{{ url_for('admin.export_logs_page') }}">로그 내보내기</a>
-                <a class="nav-link" href="{{ url_for('admin.admin_management') }}">관리자 계정 관리</a>
+                <!-- 회원 관리 영역 -->
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        회원 관리
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('admin.user_management') }}">회원 목록</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin.excel_upload_page') }}">일괄 등록</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin.student_number_management') }}">학번 관리</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin.export_logs_page') }}">로그 내보내기</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 활동 관리 영역 -->
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        활동 관리
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('admin.prompt_management') }}">프롬프트 관리</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin.video_management') }}">동영상 관리</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin.video_analytics') }}">비디오 분석</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin.activity_mode') }}">활동 모드 관리</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 관리자 계정 관리 영역 -->
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        관리자 계정 관리
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('admin.admin_management') }}">관리자 목록</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin.create_admin_page') }}">관리자 생성</a></li>
+                    </ul>
+                </div>
+                
                 <a class="nav-link" href="{{ url_for('admin.admin_logout') }}">로그아웃</a>
             </div>
         </div>

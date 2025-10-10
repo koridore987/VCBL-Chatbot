@@ -1,0 +1,171 @@
+{% extends "admin/base.html" %}
+
+{% block title %}활동 모드 관리{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">활동 모드 관리</h2>
+                    <p class="text-muted mb-0">학습자 활동 방식을 설정하고 질문지를 관리합니다</p>
+                </div>
+            </div>
+
+            <!-- 활동 모드 선택 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-toggle-on"></i> 활동 모드 설정
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.update_activity_mode') }}">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="mode" id="mode_chatbot" 
+                                           value="chatbot" {% if current_mode == 'chatbot' %}checked{% endif %}>
+                                    <label class="form-check-label" for="mode_chatbot">
+                                        <strong>챗봇 모드</strong>
+                                        <br>
+                                        <small class="text-muted">학습자가 AI 챗봇과 자유롭게 대화할 수 있습니다</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="mode" id="mode_questionnaire" 
+                                           value="questionnaire" {% if current_mode == 'questionnaire' %}checked{% endif %}>
+                                    <label class="form-check-label" for="mode_questionnaire">
+                                        <strong>질문지 모드</strong>
+                                        <br>
+                                        <small class="text-muted">관리자가 설정한 질문에 답변하는 형태입니다</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> 모드 변경
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 질문지 관리 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-question-circle"></i> 질문지 관리
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- 질문 추가 폼 -->
+                    <div class="mb-4">
+                        <form method="POST" action="{{ url_for('admin.manage_questions') }}">
+                            <input type="hidden" name="action" value="add">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        <label for="question">새 질문 추가</label>
+                                        <input type="text" class="form-control" id="question" name="question" 
+                                               placeholder="질문을 입력하세요..." required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>&nbsp;</label>
+                                        <div>
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="fas fa-plus"></i> 질문 추가
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- 질문 목록 -->
+                    {% if questions %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th width="5%">순서</th>
+                                        <th width="70%">질문</th>
+                                        <th width="25%">작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="questions-list">
+                                    {% for question in questions %}
+                                    <tr data-question-id="{{ question[0] }}">
+                                        <td>
+                                            <span class="badge bg-primary">{{ question[2] }}</span>
+                                        </td>
+                                        <td>
+                                            <strong>{{ question[1] }}</strong>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                        onclick="deleteQuestion({{ question[0] }})">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-question-circle fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">등록된 질문이 없습니다</h5>
+                            <p class="text-muted">위의 폼을 사용하여 첫 번째 질문을 추가해보세요.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteQuestion(questionId) {
+    if (confirm('정말로 이 질문을 삭제하시겠습니까?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ url_for("admin.manage_questions") }}';
+        
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'delete';
+        form.appendChild(actionInput);
+        
+        const questionIdInput = document.createElement('input');
+        questionIdInput.type = 'hidden';
+        questionIdInput.name = 'question_id';
+        questionIdInput.value = questionId;
+        form.appendChild(questionIdInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// 질문 순서 변경 (드래그 앤 드롭)
+document.addEventListener('DOMContentLoaded', function() {
+    const questionsList = document.getElementById('questions-list');
+    if (questionsList) {
+        // Sortable 기능 추가 (선택사항)
+        // 실제 구현 시 SortableJS 라이브러리 사용 권장
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,283 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}{{ user[1] }} - 활동 타임라인{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>{{ user[1] }} - 활동 타임라인</h2>
+        <a href="{{ url_for('admin.user_management') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> 회원 관리로 돌아가기
+        </a>
+    </div>
+    
+    <!-- 활동 요약 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <h3>{{ activity_summary.videos_watched }}</h3>
+                <p class="mb-0">시청한 동영상</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <h3>{{ activity_summary.videos_completed }}</h3>
+                <p class="mb-0">완료한 동영상</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <h3>{{ activity_summary.chat_messages }}</h3>
+                <p class="mb-0">사용자 메시지</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <h3>{{ activity_summary.bot_responses }}</h3>
+                <p class="mb-0">챗봇 응답</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 활동 타임라인 -->
+    <div class="row">
+        <!-- 동영상 시청 기록 -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-video"></i> 동영상 시청 기록</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% set video_activities = timeline | selectattr('1', 'in', ['video_play', 'video_pause', 'video_ended', 'video_progress']) | list %}
+                    {% if video_activities %}
+                        <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                            <table class="table table-sm mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width: 20%;">시간</th>
+                                        <th style="width: 15%;">상태</th>
+                                        <th style="width: 20%;">동영상</th>
+                                        <th style="width: 45%;">시청 정보</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for activity in video_activities %}
+                                    <tr class="{% if activity[1] == 'video_play' %}table-success{% elif activity[1] == 'video_pause' %}table-warning{% elif activity[1] == 'video_ended' %}table-success{% endif %}">
+                                        <td>
+                                            <div class="small">
+                                                <div class="text-muted">{{ activity[4] }}</div>
+                                                {% if activity[1] in ['video_play', 'video_pause'] and activity[3] and activity[3].current_time %}
+                                                    <div class="text-info">
+                                                        <i class="fas fa-map-marker-alt"></i> {{ (activity[3].current_time // 60)|int }}:{{ "%02d"|format(activity[3].current_time % 60) }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if activity[1] == 'video_play' %}bg-success
+                                                {% elif activity[1] == 'video_pause' %}bg-warning
+                                                {% elif activity[1] == 'video_ended' %}bg-success
+                                                {% elif activity[1] == 'video_progress' %}bg-info
+                                                {% else %}bg-secondary{% endif %}">
+                                                {% if activity[1] == 'video_play' %}
+                                                    <i class="fas fa-play"></i> 재생
+                                                {% elif activity[1] == 'video_pause' %}
+                                                    <i class="fas fa-pause"></i> 일시정지
+                                                {% elif activity[1] == 'video_ended' %}
+                                                    <i class="fas fa-check-circle"></i> 완료
+                                                {% elif activity[1] == 'video_progress' %}
+                                                    <i class="fas fa-clock"></i> 시청중
+                                                {% endif %}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if activity[6] %}
+                                                <small class="text-muted">{{ activity[6] }}</small>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if activity[3] and activity[3].current_time and activity[3].duration %}
+                                                <div class="small">
+                                                    <div class="text-info">
+                                                        <i class="fas fa-clock"></i> {{ (activity[3].current_time // 60)|int }}:{{ "%02d"|format(activity[3].current_time % 60) }} / {{ (activity[3].duration // 60)|int }}:{{ "%02d"|format(activity[3].duration % 60) }}
+                                                    </div>
+                                                    {% set time_ratio = (activity[3].current_time / activity[3].duration * 100) if activity[3].duration > 0 else 0 %}
+                                                    <div class="progress" style="height: 3px;">
+                                                        <div class="progress-bar bg-info" style="width: {{ "%.1f"|format(time_ratio) }}%"></div>
+                                                    </div>
+                                                    {% if activity[3].progress_percentage %}
+                                                        <div class="text-success">
+                                                            <i class="fas fa-chart-line"></i> {{ "%.1f"|format(activity[3].progress_percentage) }}%
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-video fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">동영상 시청 기록이 없습니다</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 채팅 기록 -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-comments"></i> 채팅 기록</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% set chat_activities = timeline | selectattr('1', 'in', ['chat_message', 'bot_response_start', 'bot_response_end']) | list %}
+                    {% if chat_activities %}
+                        <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                            <table class="table table-sm mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width: 20%;">시간</th>
+                                        <th style="width: 15%;">구분</th>
+                                        <th style="width: 65%;">내용</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for activity in chat_activities %}
+                                    <tr class="{% if activity[1] == 'chat_message' %}table-primary{% elif activity[1] == 'bot_response_end' %}table-success{% endif %}">
+                                        <td>
+                                            <div class="small text-muted">{{ activity[4] }}</div>
+                                        </td>
+                                        <td>
+                                            {% if activity[1] == 'chat_message' %}
+                                                <span class="badge bg-primary">
+                                                    <i class="fas fa-user"></i> 사용자
+                                                </span>
+                                            {% elif activity[1] == 'bot_response_start' %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-robot"></i> 응답중
+                                                </span>
+                                            {% elif activity[1] == 'bot_response_end' %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-robot"></i> 챗봇
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if activity[2] %}
+                                                <div class="message-content">
+                                                    {% if activity[1] == 'chat_message' %}
+                                                        <div class="user-message">
+                                                            <i class="fas fa-quote-left text-primary"></i>
+                                                            {{ activity[2] }}
+                                                        </div>
+                                                    {% elif activity[1] == 'bot_response_end' %}
+                                                        <div class="bot-message">
+                                                            <i class="fas fa-quote-left text-success"></i>
+                                                            {{ activity[2] }}
+                                                            {% if activity[3] and activity[3].response_length %}
+                                                                <small class="text-muted d-block mt-1">
+                                                                    <i class="fas fa-file-text"></i> {{ activity[3].response_length }}자
+                                                                </small>
+                                                            {% endif %}
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-comments fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">채팅 기록이 없습니다</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 내보내기 버튼 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="mb-3">데이터 내보내기</h5>
+                    <button class="btn btn-success me-2" onclick="exportTimeline('csv')">
+                        <i class="fas fa-file-csv"></i> CSV 다운로드
+                    </button>
+                    <button class="btn btn-primary" onclick="exportTimeline('excel')">
+                        <i class="fas fa-file-excel"></i> Excel 다운로드
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.message-content {
+    max-width: 100%;
+    word-wrap: break-word;
+}
+
+.user-message {
+    background-color: #e3f2fd;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border-left: 3px solid #2196f3;
+    margin: 2px 0;
+}
+
+.bot-message {
+    background-color: #e8f5e8;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border-left: 3px solid #4caf50;
+    margin: 2px 0;
+}
+
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table-responsive {
+    border-radius: 0.375rem;
+}
+
+.card-header {
+    border-bottom: 1px solid rgba(0,0,0,.125);
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0,0,0,.05);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportTimeline(format) {
+    const userId = {{ user[0] }};
+    const url = `/admin/user/${userId}/export_timeline?format=${format}`;
+    window.open(url, '_blank');
+}
+</script>
+{% endblock %}

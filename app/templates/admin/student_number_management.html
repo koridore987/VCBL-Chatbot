@@ -1,0 +1,108 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}학번 관리{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">학번 관리</h4>
+                <a href="{{ url_for('admin.user_management') }}" class="btn btn-secondary">회원 관리로</a>
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                
+                <!-- 학번 추가 폼 -->
+                <div class="create-admin-form mb-4">
+                    <h5>새 학번 추가</h5>
+                    <form method="POST" action="{{ url_for('admin.add_student_number') }}">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="student_number" class="form-label">학번 (10자리)</label>
+                                    <input type="text" class="form-control" id="student_number" name="student_number" 
+                                           maxlength="10" pattern="[0-9]{10}" required>
+                                    <small class="form-text text-muted">학번은 10자리 숫자여야 합니다.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">이름 (선택사항)</label>
+                                    <input type="text" class="form-control" id="name" name="name">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div>
+                                        <button type="submit" class="btn btn-primary">추가</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 학번 목록 -->
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>학번</th>
+                                <th>이름</th>
+                                <th>등록일</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in student_numbers %}
+                            <tr>
+                                <td>{{ student[0] }}</td>
+                                <td>{{ student[1] }}</td>
+                                <td>{{ student[2] or '-' }}</td>
+                                <td>{{ student[3] }}</td>
+                                <td>
+                                    <button class="btn btn-danger btn-sm" 
+                                            onclick="deleteStudentNumber({{ student[0] }})">
+                                        삭제
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteStudentNumber(studentNumberId) {
+    if (confirm('정말로 이 학번을 삭제하시겠습니까?')) {
+        fetch(`/admin/delete_student_number/${studentNumberId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('삭제에 실패했습니다: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('삭제 중 오류가 발생했습니다.');
+        });
+    }
+}
+</script>
+{% endblock %}

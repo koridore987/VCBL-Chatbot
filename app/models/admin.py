@@ -122,8 +122,13 @@ class AdminManager:
             conn.close()
     
     def delete_admin(self, admin_id: int, current_admin_id: int) -> bool:
-        """관리자 삭제 (자기 자신은 삭제 불가)"""
+        """관리자 삭제 (자기 자신은 삭제 불가, super 관리자는 삭제 불가)"""
         if admin_id == current_admin_id:
+            return False
+        
+        # 삭제하려는 관리자가 super인지 확인
+        target_admin = self.get_admin_by_id(admin_id)
+        if target_admin and target_admin[2] == 'super':
             return False
             
         conn = self.get_connection()
@@ -147,5 +152,84 @@ class AdminManager:
         try:
             cursor.execute("SELECT COUNT(*) FROM admin WHERE role = 'super'")
             return cursor.fetchone()[0] > 0
+        finally:
+            conn.close()
+    
+    def create_student_number_table(self):
+        """학번 테이블 생성"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS student_numbers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    student_number TEXT UNIQUE NOT NULL,
+                    name TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+        finally:
+            conn.close()
+    
+    def add_student_number(self, student_number: str, name: str = None) -> bool:
+        """학번 추가"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute(
+                "INSERT INTO student_numbers (student_number, name) VALUES (?, ?)",
+                (student_number, name)
+            )
+            conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False  # 중복된 학번
+        except sqlite3.Error:
+            conn.rollback()
+            return False
+        finally:
+            conn.close()
+    
+    def verify_student_number(self, student_number: str) -> bool:
+        """학번 검증"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("SELECT id FROM student_numbers WHERE student_number = ?", (student_number,))
+            return cursor.fetchone() is not None
+        finally:
+            conn.close()
+    
+    def get_all_student_numbers(self) -> List[Tuple[int, str, str, str]]:
+        """모든 학번 목록 조회"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("""
+                SELECT id, student_number, name, created_at
+                FROM student_numbers
+                ORDER BY created_at DESC
+            """)
+            return cursor.fetchall()
+        finally:
+            conn.close()
+    
+    def delete_student_number(self, student_number_id: int) -> bool:
+        """학번 삭제"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("DELETE FROM student_numbers WHERE id = ?", (student_number_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        except sqlite3.Error:
+            conn.rollback()
+            return False
         finally:
             conn.close()
