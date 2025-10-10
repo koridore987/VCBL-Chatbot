@@ -13,6 +13,13 @@ def create_app():
     app.secret_key = config.SECRET_KEY
     app.config['DEBUG'] = config.DEBUG
     
+    # 보안 설정
+    app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS에서만 쿠키 전송
+    app.config['SESSION_COOKIE_HTTPONLY'] = True  # JavaScript에서 쿠키 접근 방지
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'  # CSRF 공격 방지
+    app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 세션 타임아웃 1시간
+    app.config['SESSION_COOKIE_NAME'] = 'vcbl_session'  # 세션 쿠키 이름 변경
+    
     # 블루프린트 등록
     app.register_blueprint(auth.bp)
     app.register_blueprint(chat.bp)
