@@ -3,22 +3,58 @@
 """
 import sqlite3
 import hashlib
+import threading
 from typing import List, Tuple, Optional
+from werkzeug.security import check_password_hash, generate_password_hash
 from app import config
 
 class DatabaseManager:
-    """데이터베이스 관리 클래스"""
+    """데이터베이스 관리 클래스 (PythonAnywhere 최적화)"""
     
     def __init__(self, db_path: str = None):
         self.db_path = db_path or config.DATABASE_PATH
+        self._connection = None
+        self._lock = threading.Lock()
     
     def get_connection(self):
-        """데이터베이스 연결 반환"""
-        return sqlite3.connect(self.db_path)
+        """최적화된 데이터베이스 연결 반환"""
+        with self._lock:
+            if self._connection is None:
+                self._connection = sqlite3.connect(
+                    self.db_path,
+                    timeout=30.0,
+                    check_same_thread=False
+                )
+                # PythonAnywhere 최적화 설정
+                self._connection.execute("PRAGMA journal_mode=WAL")
+                self._connection.execute("PRAGMA synchronous=NORMAL")
+                self._connection.execute("PRAGMA cache_size=10000")
+                self._connection.execute("PRAGMA temp_store=MEMORY")
+                self._connection.execute("PRAGMA mmap_size=268435456")
+                self._connection.execute("PRAGMA optimize")
+            return self._connection
     
     def hash_password(self, password: str) -> str:
-        """비밀번호 해시화"""
-        return hashlib.sha256(password.encode()).hexdigest()
+        """비밀번호 해시화 (솔트 포함)"""
+        return generate_password_hash(password)
+
+    def verify_password(self, password: str, password_hash: str, cursor=None, user_id: Optional[int] = None) -> bool:
+        """
+        저장된 해시와 평문 비밀번호 비교.
+        legacy SHA-256 해시도 지원하며, 검증에 성공하면 PBKDF2 해시로 업그레이드합니다.
+        """
+        if password_hash.startswith('pbkdf2:'):
+            return check_password_hash(password_hash, password)
+
+        # 레거시 SHA-256
+        legacy_match = hashlib.sha256(password.encode()).hexdigest() == password_hash
+        if legacy_match and cursor is not None and user_id is not None:
+            # 성공 시 즉시 PBKDF2로 업그레이드
+            cursor.execute(
+                "UPDATE user SET password_hash = ? WHERE id = ?",
+                (self.hash_password(password), user_id)
+            )
+        return legacy_match
     
     def get_user_by_username(self, username: str) -> Optional[int]:
         """사용자명으로 사용자 ID 조회"""
@@ -42,7 +78,9 @@ class DatabaseManager:
             )
             row = cursor.fetchone()
             
-            if row and self.hash_password(password) == row[1]:
+            if row and self.verify_password(password, row[1], cursor=cursor, user_id=row[0]):
+                if not row[1].startswith('pbkdf2:'):
+                    conn.commit()
                 return row[0]  # user_id
             return None
         finally:
@@ -60,6 +98,65 @@ class DatabaseManager:
             )
             conn.commit()
             return cursor.lastrowid
+        finally:
+            conn.close()
+    
+    def create_user_by_student_number(self, student_number: str, password: str, name: str = None) -> int:
+        """학번으로 새 사용자 생성 (이름 자동 채우기)"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            # 학번 검증 및 이름 가져오기
+            cursor.execute("SELECT id, name FROM student_numbers WHERE student_number = ?", (student_number,))
+            student_info = cursor.fetchone()
+            if not student_info:
+                raise ValueError("등록되지 않은 학번입니다.")
+            
+            # 이미 등록된 학번인지 확인
+            cursor.execute("SELECT id FROM user WHERE student_number = ?", (student_number,))
+            if cursor.fetchone():
+                raise ValueError("이미 등록된 학번입니다.")
+            
+            # 사용자명 생성 (학번 기반)
+            username = f"student_{student_number}"
+            
+            # 학번에 등록된 이름이 있으면 사용, 없으면 파라미터로 받은 이름 사용
+            student_name = student_info[1] if student_info[1] else name
+            
+            # 사용자 생성
+            password_hash = self.hash_password(password)
+            cursor.execute(
+                "INSERT INTO user (username, password_hash, student_number, name, chatbot_type_id) VALUES (?, ?, ?, ?, ?)",
+                (username, password_hash, student_number, student_name, 1)
+            )
+            conn.commit()
+            return cursor.lastrowid
+        except sqlite3.Error as e:
+            conn.rollback()
+            raise e
+        finally:
+            conn.close()
+    
+    def verify_student_number(self, student_number: str) -> tuple:
+        """학번 검증 및 정보 반환"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT id, name FROM student_numbers WHERE student_number = ?", (student_number,))
+            result = cursor.fetchone()
+            if result:
+                return result  # (id, name)
+            return None
+        finally:
+            conn.close()
+    
+    def check_student_registration(self, student_number: str) -> bool:
+        """학번 등록 여부 확인"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT id FROM user WHERE student_number = ?", (student_number,))
+            return cursor.fetchone() is not None
         finally:
             conn.close()
     
@@ -167,6 +264,9 @@ class DatabaseManager:
             recent_users = cursor.fetchone()[0]
             
             return total_users, active_users, total_messages, recent_users
+        except Exception as e:
+            print(f"get_user_stats 오류: {e}")
+            return 0, 0, 0, 0
         finally:
             conn.close()
     
