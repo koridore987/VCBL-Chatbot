@@ -29,14 +29,20 @@ activity_log_manager = ActivityLogManager()
 
 def check_admin_auth(request):
     """관리자 인증 확인"""
-    admin_id = request.cookies.get('admin_id')
-    admin_role = request.cookies.get('admin_role')
+    # 새로운 쿠키 방식 확인
+    admin_username = request.cookies.get('admin_username')
+    admin_id_hash = request.cookies.get('admin_id_hash')
+    user_type = request.cookies.get('user_type')
     
-    if admin_id and admin_role:
-        # 데이터베이스에서 관리자 존재 확인
-        admin = admin_manager.get_admin_by_id(int(admin_id))
-        if admin:
-            return (int(admin_id), admin_role)
+    if admin_username and admin_id_hash and user_type == 'admin':
+        # 관리자 ID 조회
+        admin_id = admin_manager.get_admin_by_username(admin_username)
+        if admin_id:
+            import hashlib
+            if admin_id_hash == hashlib.sha256(str(admin_id).encode()).hexdigest():
+                admin = admin_manager.get_admin_by_id(admin_id)
+                if admin:
+                    return (admin_id, admin[3])  # admin[3]은 role
     return None
 
 def require_auth(f):
@@ -63,30 +69,18 @@ def require_super(f):
 
 @bp.route('/login', methods=['GET', 'POST'])
 def admin_login():
-    """관리자 로그인"""
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '').strip()
-        
-        auth_result = admin_manager.authenticate_admin(username, password)
-        if auth_result:
-            admin_id, role = auth_result
-            # 쿠키 설정
-            response = make_response(redirect(url_for('admin.dashboard')))
-            response.set_cookie('admin_id', str(admin_id), max_age=3600)  # 1시간
-            response.set_cookie('admin_role', role, max_age=3600)
-            return response
-        else:
-            return render_template('admin/login.html', error='잘못된 인증 정보입니다.')
-    
-    return render_template('admin/login.html')
+    """관리자 로그인 - 통합 로그인 페이지로 리다이렉트"""
+    return redirect(url_for('auth.login_page'))
 
 @bp.route('/logout')
 def admin_logout():
     """관리자 로그아웃"""
-    response = make_response(redirect(url_for('admin.admin_login')))
+    response = make_response(redirect(url_for('auth.login_page')))
     response.set_cookie('admin_id', '', expires=0)
     response.set_cookie('admin_role', '', expires=0)
+    response.set_cookie('admin_username', '', expires=0)
+    response.set_cookie('admin_id_hash', '', expires=0)
+    response.set_cookie('user_type', '', expires=0)
     return response
 
 @bp.route('/')
