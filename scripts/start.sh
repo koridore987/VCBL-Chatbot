@@ -99,3 +99,11 @@ exec gunicorn \
     --error-logfile - \
     run:app
 
+# start.sh의 마이그레이션 코드 수정 (오류 포착을 위해)
+if [ "$FLASK_ENV" = "production" ] && [ -n "$CLOUD_SQL_INSTANCE" ]; then
+    echo "Running database migrations..."
+    cd /app/backend
+    export FLASK_APP=run.py
+    # 오류 메시지를 명확히 출력
+    flask db upgrade 2>&1 || { echo "ERROR: Database migration failed!"; exit 1; }
+fi
