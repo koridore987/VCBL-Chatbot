@@ -1,34 +1,67 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useAuth } from '../contexts/AuthContext'
+import { 
+  HiVideoCamera, 
+  HiLockClosed, 
+  HiUser, 
+  HiIdentification, 
+  HiCheckCircle,
+  HiSparkles 
+} from 'react-icons/hi'
 
 const Register = () => {
   const [studentId, setStudentId] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   
-  const { register } = useAuth()
+  const { user, register } = useAuth()
   const navigate = useNavigate()
+
+  // 이미 로그인된 사용자는 메인 페이지로 리다이렉트
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true })
+    }
+  }, [user, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+
+    // 학번 검증 (10자리 숫자)
+    const studentIdNum = parseInt(studentId)
+    if (isNaN(studentIdNum) || studentId.length !== 10) {
+      setError('학번은 10자리 숫자여야 합니다')
+      return
+    }
+
+    // 관리자 범위 체크 (9999로 시작하는 학번 방지)
+    if (studentId.startsWith('9999')) {
+      setError('해당 학번 범위는 관리자 전용입니다')
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('비밀번호가 일치하지 않습니다')
       return
     }
 
+    if (password.length < 8) {
+      setError('비밀번호는 최소 8자 이상이어야 합니다')
+      return
+    }
+
     setLoading(true)
 
-    const result = await register(studentId, password, name)
+    const result = await register(studentIdNum, password)
     
     if (result.success) {
-      alert('회원가입이 완료되었습니다. 로그인해주세요.')
-      navigate('/login')
+      // 회원가입 및 자동 로그인 성공 시 설문 페이지로 이동
+      navigate('/survey')
     } else {
       setError(result.error)
     }
@@ -37,76 +70,191 @@ const Register = () => {
   }
 
   return (
-    <div className="container" style={{ maxWidth: '400px', marginTop: '80px' }}>
-      <div className="card">
-        <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>회원가입</h1>
-        
-        {error && (
-          <div className="alert alert-error">{error}</div>
-        )}
-        
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">학번</label>
-            <input
-              type="text"
-              className="form-input"
-              value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="form-group">
-            <label className="form-label">이름</label>
-            <input
-              type="text"
-              className="form-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="form-group">
-            <label className="form-label">비밀번호</label>
-            <input
-              type="password"
-              className="form-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="form-group">
-            <label className="form-label">비밀번호 확인</label>
-            <input
-              type="password"
-              className="form-input"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-            />
-          </div>
-          
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%', marginTop: '10px' }}
-            disabled={loading}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-4 relative overflow-hidden">
+      {/* Decorative blobs */}
+      <div className="absolute top-20 -left-20 w-96 h-96 bg-gradient-to-br from-primary-400/20 to-accent-400/20 rounded-full blur-3xl animate-blob" />
+      <div className="absolute bottom-20 -right-20 w-96 h-96 bg-gradient-to-tr from-secondary-400/20 to-primary-400/20 rounded-full blur-3xl animate-blob" style={{ animationDelay: '2s' }} />
+      
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md relative z-10"
+      >
+        {/* Logo Section */}
+        <div className="text-center mb-8">
+          <motion.div 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", delay: 0.2 }}
+            className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary-600 to-primary-500 rounded-2xl mb-4 shadow-xl relative"
           >
-            {loading ? '가입 중...' : '회원가입'}
-          </button>
-        </form>
+            <HiVideoCamera className="text-4xl text-white" />
+            <div className="absolute -top-2 -right-2 w-6 h-6 bg-accent-500 rounded-full flex items-center justify-center">
+              <HiSparkles className="text-white text-xs" />
+            </div>
+          </motion.div>
+          <motion.h1 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="text-4xl font-extrabold mb-2"
+          >
+            <span className="bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
+              VCBL
+            </span>
+            <span className="text-gray-800"> 학습 플랫폼</span>
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-gray-600"
+          >
+            새로운 계정을 만들어보세요
+          </motion.p>
+        </div>
         
-        <p style={{ textAlign: 'center', marginTop: '20px' }}>
-          이미 계정이 있으신가요? <Link to="/login">로그인</Link>
-        </p>
-      </div>
+        {/* Register Card */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="glass-card p-8 shadow-glass-lg"
+        >
+          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">회원가입</h2>
+          
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="alert alert-error mb-6"
+            >
+              <p className="text-sm font-medium">{error}</p>
+            </motion.div>
+          )}
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Student ID Field */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                학번 (10자리)
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <HiIdentification className="text-gray-400 text-lg" />
+                </div>
+                <input
+                  type="text"
+                  className="form-input pl-11"
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="10자리 학번을 입력하세요"
+                  maxLength="10"
+                  required
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                관리자에게 사전 등록된 학번으로만 가입 가능합니다
+              </p>
+            </div>
+            
+            {/* Password Field */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                비밀번호
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <HiLockClosed className="text-gray-400 text-lg" />
+                </div>
+                <input
+                  type="password"
+                  className="form-input pl-11"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="비밀번호 (최소 8자)"
+                  required
+                />
+              </div>
+            </div>
+            
+            {/* Confirm Password Field */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                비밀번호 확인
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <HiLockClosed className="text-gray-400 text-lg" />
+                </div>
+                <input
+                  type="password"
+                  className={`form-input pl-11 ${
+                    confirmPassword && password === confirmPassword
+                      ? '!border-accent-500 !ring-accent-500'
+                      : ''
+                  }`}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="비밀번호 다시 입력"
+                  required
+                />
+                {confirmPassword && password === confirmPassword && (
+                  <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                    <HiCheckCircle className="text-accent-500 text-xl" />
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Submit Button */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              className={`btn w-full flex items-center justify-center space-x-2 py-3 mt-6 ${
+                loading ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'btn-primary'
+              }`}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <div className="spinner !w-5 !h-5 !border-2"></div>
+                  <span>가입 중...</span>
+                </>
+              ) : (
+                <>
+                  <HiCheckCircle className="text-xl" />
+                  <span>회원가입</span>
+                </>
+              )}
+            </motion.button>
+          </form>
+          
+          {/* Login Link */}
+          <div className="mt-6 text-center">
+            <p className="text-gray-600">
+              이미 계정이 있으신가요?{' '}
+              <Link to="/login" className="text-primary-600 hover:text-primary-700 font-bold hover:underline">
+                로그인
+              </Link>
+            </p>
+          </div>
+        </motion.div>
+        
+        {/* Footer */}
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="text-center text-gray-500 text-sm mt-6"
+        >
+          © 2024 VCBL 학습 플랫폼. All rights reserved.
+        </motion.p>
+      </motion.div>
     </div>
   )
 }
 
 export default Register
-

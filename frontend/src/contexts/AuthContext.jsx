@@ -1,5 +1,6 @@
 import { createContext, useState, useContext, useEffect } from 'react'
 import api from '../services/api'
+import { storage } from '../utils'
 
 const AuthContext = createContext(null)
 
@@ -16,11 +17,12 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const savedUser = localStorage.getItem('user')
+    // storage helper를 사용하여 토큰과 사용자 정보 로드
+    const token = storage.get('token')
+    const savedUser = storage.get('user')
     
     if (token && savedUser) {
-      setUser(JSON.parse(savedUser))
+      setUser(savedUser)
       fetchCurrentUser()
     } else {
       setLoading(false)
@@ -31,7 +33,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.get('/auth/me')
       setUser(response.data)
-      localStorage.setItem('user', JSON.stringify(response.data))
+      storage.set('user', response.data)
     } catch (error) {
       console.error('Failed to fetch user:', error)
       logout()
@@ -49,8 +51,12 @@ export const AuthProvider = ({ children }) => {
       
       const { access_token, user } = response.data
       
-      localStorage.setItem('token', access_token)
-      localStorage.setItem('user', JSON.stringify(user))
+      // storage helper를 사용하여 토큰과 사용자 정보 저장
+      storage.set('token', access_token)
+      storage.set('user', user)
+      
+      // 토큰 저장 후 충분히 대기한 뒤 상태 업데이트 (동기화 보장)
+      await new Promise(resolve => setTimeout(resolve, 100))
       setUser(user)
       
       return { success: true }
@@ -62,15 +68,17 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const register = async (studentId, password, name) => {
+  const register = async (studentId, password) => {
     try {
       await api.post('/auth/register', {
         student_id: studentId,
-        password,
-        name
+        password
       })
       
-      return { success: true }
+      // 회원가입 후 자동 로그인
+      const loginResult = await login(studentId, password)
+      
+      return { success: true, autoLoggedIn: loginResult.success }
     } catch (error) {
       return {
         success: false,
@@ -80,8 +88,8 @@ export const AuthProvider = ({ children }) => {
   }
 
   const logout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    storage.remove('token')
+    storage.remove('user')
     setUser(null)
   }
 

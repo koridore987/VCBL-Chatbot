@@ -55,9 +55,17 @@ const AdminDashboard = () => {
           <div className="card">
             <h3>토큰 사용량</h3>
             <p style={{ fontSize: '32px', fontWeight: 'bold', color: '#FF9800', marginTop: '10px' }}>
-              {Math.round(stats.tokens.total / 1000)}K
+              {Math.round((stats.tokens.total || 0) / 1000)}K
             </p>
-            <p style={{ color: '#666' }}>전체 토큰</p>
+            <p style={{ color: '#666' }}>
+              오늘: {Math.round((stats.tokens.daily || 0) / 1000)}K
+            </p>
+            {stats.tokens.from_messages !== undefined && (
+              <p style={{ fontSize: '11px', color: '#999', marginTop: '8px' }}>
+                메시지: {Math.round((stats.tokens.from_messages || 0) / 1000)}K / 
+                사용자: {Math.round((stats.tokens.from_users || 0) / 1000)}K
+              </p>
+            )}
           </div>
           
           <div className="card">
@@ -75,27 +83,21 @@ const AdminDashboard = () => {
         <h2 style={{ marginBottom: '20px' }}>관리 메뉴</h2>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-          <Link to="/admin/users" style={{ textDecoration: 'none' }}>
+          <Link to="/admin/students" style={{ textDecoration: 'none' }}>
             <button className="btn btn-primary" style={{ width: '100%' }}>
-              사용자 관리
+              학생 관리
             </button>
           </Link>
           
-          <Link to="/admin/videos" style={{ textDecoration: 'none' }}>
+          <Link to="/admin/content" style={{ textDecoration: 'none' }}>
             <button className="btn btn-primary" style={{ width: '100%' }}>
-              비디오 관리
-            </button>
-          </Link>
-          
-          <Link to="/admin/prompts" style={{ textDecoration: 'none' }}>
-            <button className="btn btn-primary" style={{ width: '100%' }}>
-              프롬프트 관리
+              콘텐츠 관리
             </button>
           </Link>
           
           <Link to="/admin/logs" style={{ textDecoration: 'none' }}>
             <button className="btn btn-primary" style={{ width: '100%' }}>
-              로그 관리
+              활동 로그
             </button>
           </Link>
         </div>

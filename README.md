@@ -57,17 +57,22 @@ Flask + React + PostgreSQL 기반의 온라인 학습 플랫폼으로, YouTube �
 
 ### Deployment
 - **Container**: Docker
+- **Database**: PostgreSQL 15 (Cloud SQL)
 - **Cloud**: Google Cloud Run
-- **CI/CD**: GitHub Actions
+- **CI/CD**: Cloud Build
+- **Secrets**: Google Secret Manager
+- **Caching**: Redis (Rate Limiting)
 - **Reverse Proxy**: Nginx
 
 ## 프로젝트 구조
 
 ```
-VCBL-Chatbot/
+vcbl-chatbot/
 ├── backend/                    # Flask API 서버
 │   ├── app/
 │   │   ├── __init__.py        # Flask 앱 초기화
+│   │   ├── config.py          # 설정 관리
+│   │   ├── constants.py       # 상수 정의
 │   │   ├── models/            # SQLAlchemy 모델
 │   │   │   ├── user.py
 │   │   │   ├── video.py
@@ -75,42 +80,67 @@ VCBL-Chatbot/
 │   │   │   ├── chat_message.py
 │   │   │   ├── chat_prompt_template.py
 │   │   │   ├── event_log.py
-│   │   │   └── scaffolding.py
+│   │   │   ├── scaffolding.py
+│   │   │   └── survey.py
 │   │   ├── routes/            # API 라우트
 │   │   │   ├── auth.py
 │   │   │   ├── videos.py
 │   │   │   ├── chat.py
 │   │   │   ├── admin.py
-│   │   │   └── logs.py
-│   │   └── services/          # 비즈니스 로직
-│   │       └── openai_service.py
-│   ├── requirements.txt
-│   └── run.py
+│   │   │   ├── logs.py
+│   │   │   └── surveys.py
+│   │   ├── services/          # 비즈니스 로직
+│   │   │   ├── auth_service.py
+│   │   │   ├── chat_service.py
+│   │   │   ├── openai_service.py
+│   │   │   ├── scaffolding_service.py
+│   │   │   ├── survey_service.py
+│   │   │   ├── user_service.py
+│   │   │   └── video_service.py
+│   │   ├── validators/        # 입력 검증
+│   │   │   ├── auth_schemas.py
+│   │   │   ├── chat_schemas.py
+│   │   │   └── ...
+│   │   └── utils/             # 유틸리티
+│   │       ├── decorators.py
+│   │       ├── error_handlers.py
+│   │       ├── logger.py
+│   │       └── responses.py
+│   ├── migrations/            # Alembic 마이그레이션
+│   ├── env.example            # 환경 변수 템플릿
+│   ├── requirements.txt       # Python 의존성
+│   └── run.py                 # 진입점
 ├── frontend/                   # React 웹앱
 │   ├── src/
-│   │   ├── components/
-│   │   ├── contexts/
-│   │   ├── pages/
-│   │   ├── services/
+│   │   ├── components/        # 재사용 컴포넌트
+│   │   ├── contexts/          # React Context
+│   │   ├── hooks/             # Custom Hooks
+│   │   ├── pages/             # 페이지 컴포넌트
+│   │   ├── services/          # API 클라이언트
+│   │   ├── utils/             # 유틸리티
+│   │   ├── constants/         # 상수
 │   │   ├── App.jsx
 │   │   └── main.jsx
-│   ├── package.json
-│   └── vite.config.js
-├── config/                     # 설정 파일
+│   ├── env.example            # 환경 변수 템플릿
+│   ├── package.json           # Node 의존성
+│   ├── vite.config.js         # Vite 설정
+│   └── tailwind.config.js     # Tailwind CSS 설정
+├── dev/                        # 로컬 개발 전용
+│   ├── start-local.sh         # 개발 서버 시작
+│   └── README.md              # 개발 가이드
+├── scripts/                    # 배포/관리 스크립트
+│   ├── setup.sh               # 초기 설정
+│   └── create-admin.sh        # 관리자 생성
+├── config/                     # 서버 설정
 │   ├── nginx.conf
 │   └── nginx-full.conf
-├── scripts/                    # 유틸리티 스크립트
-│   ├── start.sh
-│   ├── init-db.sh
-│   ├── create-admin.sh
-│   └── create-default-prompt.sh
-├── .github/workflows/          # CI/CD 파이프라인
-│   ├── deploy.yml
-│   └── ci.yml
-├── Dockerfile                  # 통합 Dockerfile
-├── Dockerfile.backend          # Backend 전용
-├── Dockerfile.frontend         # Frontend 전용
-├── docker-compose.yml
+├── docs/                       # 문서
+│   ├── API.md
+│   ├── DEPLOYMENT.md
+│   └── DEVELOPMENT.md
+├── Dockerfile                  # 프로덕션 Docker 이미지
+├── docker-compose.yml          # 로컬 Docker 환경
+├── cloudbuild.yaml             # GCP Cloud Build
 └── README.md
 ```
 
@@ -128,44 +158,63 @@ cp frontend/env.example frontend/.env
 # VITE_API_URL 설정
 ```
 
-### 2. Docker Compose로 실행
+### 2. Docker Compose로 실행 (권장)
 
 ```bash
-# 모든 서비스 시작 (PostgreSQL + Backend + Frontend)
+# .env 파일 설정
+cp backend/env.example backend/.env
+# backend/.env 파일에서 OPENAI_API_KEY 등 필수 값 설정
+
+# 모든 서비스 시작 (PostgreSQL + Redis + Backend)
 docker-compose up -d
 
-# 데이터베이스 초기화
-docker-compose exec backend flask db upgrade
+# 로그 확인
+docker-compose logs -f app
 
-# Super Admin 생성
-docker-compose exec backend bash /app/scripts/create-admin.sh admin001 "관리자" admin123
+# 애플리케이션 접속
+# http://localhost:8080
 
-# 기본 프롬프트 생성
-docker-compose exec backend bash /app/scripts/create-default-prompt.sh
+# 서비스 중지
+docker-compose down
 ```
 
 ### 3. 로컬 개발 환경
 
-#### Backend
+#### 빠른 시작
+```bash
+# 1. 의존성 설치 및 환경 설정
+./scripts/setup.sh
+
+# 2. 환경 변수 설정
+cp backend/env.example backend/.env
+cp frontend/env.example frontend/.env
+# .env 파일을 편집하여 SECRET_KEY와 OPENAI_API_KEY 설정
+
+# 3. 데이터베이스 마이그레이션
+cd backend
+source venv/bin/activate
+flask db upgrade
+cd ..
+
+# 4. 관리자 계정 생성
+./scripts/create-admin.sh
+
+# 5. 개발 서버 실행
+./dev/start-local.sh
+```
+
+#### 개별 실행
+
+**Backend**
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# 데이터베이스 마이그레이션
-flask db init
-flask db migrate -m "Initial migration"
-flask db upgrade
-
-# 서버 실행
+source venv/bin/activate
 python run.py
 ```
 
-#### Frontend
+**Frontend**
 ```bash
 cd frontend
-npm install
 npm run dev
 ```
 
@@ -226,28 +275,61 @@ npm run dev
 - `GET /chat-sessions/export` - 채팅 로그 CSV
 - `GET /stats` - 통계 정보
 
-## Cloud Run 배포
+## Google Cloud Run 배포
 
-### 1. GitHub Secrets 설정
-
-Repository Settings > Secrets and variables > Actions에서 다음 설정:
-
-- `GCP_PROJECT_ID`: GCP 프로젝트 ID
-- `GCP_SA_KEY`: GCP Service Account JSON 키
-- `CLOUD_RUN_REGION`: 리전 (예: asia-northeast3)
-- `DATABASE_URL`: PostgreSQL 연결 URL
-- `SECRET_KEY`: Flask 시크릿 키
-- `OPENAI_API_KEY`: OpenAI API 키
-
-### 2. 자동 배포
+### 빠른 배포
 
 ```bash
-# main 브랜치에 푸시하면 자동 배포
-git push origin main
+# 1. 초기 설정 (최초 1회)
+./scripts/deploy-setup.sh
 
-# develop 브랜치는 스테이징 환경 배포
-git push origin develop
+# 2. 데이터베이스 마이그레이션
+./scripts/run-migration.sh
+
+# 3. 애플리케이션 배포
+./scripts/deploy.sh
 ```
+
+### 상세 가이드
+
+자세한 배포 방법은 [Google Cloud Deployment 가이드](docs/GOOGLE_CLOUD_DEPLOYMENT.md)를 참고하세요.
+
+주요 내용:
+- Google Cloud 프로젝트 설정
+- Cloud SQL PostgreSQL 인스턴스 생성
+- Secret Manager 설정
+- Cloud Run 배포
+- CI/CD 파이프라인 구축
+- 모니터링 및 로깅
+- 비용 최적화
+
+### 배포 아키텍처
+
+```
+┌─────────────────┐
+│   Cloud Build   │ ← GitHub Push
+└────────┬────────┘
+         │ Build & Deploy
+         ▼
+┌─────────────────┐      ┌──────────────────┐
+│   Cloud Run     │ ───► │  Cloud SQL       │
+│   (Container)   │      │  (PostgreSQL 15) │
+└─────────────────┘      └──────────────────┘
+         │
+         │ Secrets
+         ▼
+┌─────────────────┐
+│ Secret Manager  │
+└─────────────────┘
+```
+
+### 주요 특징
+
+- **자동 스케일링**: 트래픽에 따라 0~100 인스턴스 자동 조정
+- **다중 작업 지원**: PostgreSQL 연결 풀링으로 동시 요청 처리
+- **고가용성**: Cloud SQL 자동 백업 및 복구
+- **보안**: Secret Manager를 통한 비밀 관리
+- **모니터링**: Cloud Logging 및 Monitoring 통합
 
 ## 요약 기반 맥락 유지 (Summary Carry-over)
 

@@ -1,20 +1,30 @@
 import { useEffect, useState } from 'react'
+import CodeMirror from '@uiw/react-codemirror'
+import { javascript } from '@codemirror/lang-javascript'
 import api from '../services/api'
 
 const AdminVideos = () => {
+  const [activeTab, setActiveTab] = useState('videos')
   const [videos, setVideos] = useState([])
   const [loading, setLoading] = useState(true)
   const [editingVideo, setEditingVideo] = useState(null)
   const [showForm, setShowForm] = useState(false)
+  const [selectedVideo, setSelectedVideo] = useState(null)
+  const [scaffoldings, setScaffoldings] = useState([])
+  const [prompts, setPrompts] = useState([])
+  const [editingPrompt, setEditingPrompt] = useState(null)
+  const [showPromptForm, setShowPromptForm] = useState(false)
 
   useEffect(() => {
     fetchVideos()
+    fetchPrompts()
   }, [])
 
   const fetchVideos = async () => {
     try {
-      const response = await api.get('/videos')
-      setVideos(response.data)
+      const response = await api.get('/admin/videos')
+      const videoData = response.data.data || []
+      setVideos(videoData)
     } catch (err) {
       console.error('Failed to fetch videos:', err)
     } finally {
@@ -22,7 +32,17 @@ const AdminVideos = () => {
     }
   }
 
-  const handleSave = async (videoData) => {
+  const fetchScaffoldings = async (videoId) => {
+    try {
+      const response = await api.get(`/videos/${videoId}`)
+      const videoData = response.data.data || response.data
+      setScaffoldings(videoData.scaffoldings || [])
+    } catch (err) {
+      console.error('Failed to fetch scaffoldings:', err)
+    }
+  }
+
+  const handleSaveVideo = async (videoData) => {
     try {
       if (editingVideo) {
         await api.put(`/admin/videos/${editingVideo.id}`, videoData)
@@ -37,7 +57,7 @@ const AdminVideos = () => {
     }
   }
 
-  const handleDelete = async (videoId) => {
+  const handleDeleteVideo = async (videoId) => {
     if (!confirm('정말 삭제하시겠습니까?')) return
     
     try {
@@ -45,6 +65,97 @@ const AdminVideos = () => {
       fetchVideos()
     } catch (err) {
       alert('삭제에 실패했습니다')
+    }
+  }
+
+  const handleToggleLearning = async (video) => {
+    try {
+      await api.put(`/admin/videos/${video.id}`, {
+        learning_enabled: !video.learning_enabled
+      })
+      fetchVideos()
+    } catch (err) {
+      alert('학습 권한 변경에 실패했습니다')
+    }
+  }
+
+  const handleChangeMode = async (video, newMode) => {
+    try {
+      await api.put(`/admin/videos/${video.id}`, {
+        scaffolding_mode: newMode
+      })
+      fetchVideos()
+    } catch (err) {
+      alert('학습 모드 변경에 실패했습니다')
+    }
+  }
+
+  const handleSaveScaffolding = async (scaffoldingData) => {
+    try {
+      if (scaffoldingData.id) {
+        await api.put(`/admin/scaffoldings/${scaffoldingData.id}`, scaffoldingData)
+      } else {
+        await api.post(`/admin/videos/${selectedVideo.id}/scaffoldings`, scaffoldingData)
+      }
+      fetchScaffoldings(selectedVideo.id)
+    } catch (err) {
+      alert('저장에 실패했습니다')
+    }
+  }
+
+  const handleDeleteScaffolding = async (scaffoldingId) => {
+    if (!confirm('정말 삭제하시겠습니까?')) return
+    
+    try {
+      await api.delete(`/admin/scaffoldings/${scaffoldingId}`)
+      fetchScaffoldings(selectedVideo.id)
+    } catch (err) {
+      alert('삭제에 실패했습니다')
+    }
+  }
+
+  const fetchPrompts = async () => {
+    try {
+      const response = await api.get('/admin/prompts')
+      const promptData = response.data.data || []
+      setPrompts(promptData)
+    } catch (err) {
+      console.error('Failed to fetch prompts:', err)
+    }
+  }
+
+  const handleSavePrompt = async (promptData) => {
+    try {
+      if (editingPrompt) {
+        await api.put(`/admin/prompts/${editingPrompt.id}`, promptData)
+      } else {
+        await api.post('/admin/prompts', promptData)
+      }
+      setShowPromptForm(false)
+      setEditingPrompt(null)
+      fetchPrompts()
+    } catch (err) {
+      alert('저장에 실패했습니다')
+    }
+  }
+
+  const handleDeletePrompt = async (promptId) => {
+    if (!confirm('정말 삭제하시겠습니까?')) return
+    
+    try {
+      await api.delete(`/admin/prompts/${promptId}`)
+      fetchPrompts()
+    } catch (err) {
+      alert(err.response?.data?.error || '삭제에 실패했습니다')
+    }
+  }
+
+  const handleTogglePromptActive = async (promptId, isActive) => {
+    try {
+      await api.put(`/admin/prompts/${promptId}`, { is_active: !isActive })
+      fetchPrompts()
+    } catch (err) {
+      alert('상태 변경에 실패했습니다')
     }
   }
 
@@ -58,61 +169,309 @@ const AdminVideos = () => {
 
   return (
     <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1>비디오 관리</h1>
+      <h1 style={{ marginBottom: '30px' }}>콘텐츠 관리</h1>
+      
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #e0e0e0' }}>
         <button
           onClick={() => {
-            setEditingVideo(null)
-            setShowForm(true)
+            setActiveTab('videos')
+            setSelectedVideo(null)
           }}
-          className="btn btn-primary"
+          className={`btn ${activeTab === 'videos' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderRadius: '8px 8px 0 0' }}
         >
-          비디오 추가
+          비디오 관리
+        </button>
+        <button
+          onClick={() => setActiveTab('questions')}
+          className={`btn ${activeTab === 'questions' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderRadius: '8px 8px 0 0' }}
+        >
+          학습질문 관리
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('prompts')
+            setSelectedVideo(null)
+          }}
+          className={`btn ${activeTab === 'prompts' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderRadius: '8px 8px 0 0' }}
+        >
+          프롬프트 엔지니어링
         </button>
       </div>
       
-      {showForm ? (
-        <VideoForm
-          video={editingVideo}
-          onSave={handleSave}
-          onCancel={() => {
-            setShowForm(false)
-            setEditingVideo(null)
-          }}
-        />
-      ) : (
-        <div style={{ display: 'grid', gap: '20px' }}>
-          {videos.map((video) => (
-            <div key={video.id} className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                <div style={{ flex: 1 }}>
-                  <h3>{video.title}</h3>
-                  <p style={{ color: '#666', margin: '10px 0' }}>{video.description}</p>
-                  <p style={{ fontSize: '14px', color: '#666' }}>
-                    YouTube ID: {video.youtube_id} | 모드: {video.scaffolding_mode}
-                  </p>
+      {/* Video Management Tab */}
+      {activeTab === 'videos' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+            <button
+              onClick={() => {
+                setEditingVideo(null)
+                setShowForm(true)
+              }}
+              className="btn btn-primary"
+            >
+              비디오 추가
+            </button>
+          </div>
+          
+          {showForm ? (
+            <VideoForm
+              video={editingVideo}
+              onSave={handleSaveVideo}
+              onCancel={() => {
+                setShowForm(false)
+                setEditingVideo(null)
+              }}
+            />
+          ) : (
+            <div style={{ display: 'grid', gap: '20px' }}>
+              {videos.map((video) => (
+                <div key={video.id} className="card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                    <div style={{ flex: 1 }}>
+                      <h3>
+                        {video.title}
+                        {!video.is_active && (
+                          <span style={{
+                            marginLeft: '10px',
+                            padding: '4px 8px',
+                            backgroundColor: '#f44336',
+                            color: 'white',
+                            borderRadius: '3px',
+                            fontSize: '12px'
+                          }}>
+                            비활성
+                          </span>
+                        )}
+                        {video.learning_enabled ? (
+                          <span style={{
+                            marginLeft: '10px',
+                            padding: '4px 8px',
+                            backgroundColor: '#4CAF50',
+                            color: 'white',
+                            borderRadius: '3px',
+                            fontSize: '12px'
+                          }}>
+                            학습 가능
+                          </span>
+                        ) : (
+                          <span style={{
+                            marginLeft: '10px',
+                            padding: '4px 8px',
+                            backgroundColor: '#FF9800',
+                            color: 'white',
+                            borderRadius: '3px',
+                            fontSize: '12px'
+                          }}>
+                            학습 잠김
+                          </span>
+                        )}
+                      </h3>
+                      <p style={{ color: '#666', margin: '10px 0' }}>{video.description}</p>
+                      <p style={{ fontSize: '14px', color: '#666' }}>
+                        YouTube ID: {video.youtube_id} | 순서: {video.order_index}
+                      </p>
+                      <div style={{ marginTop: '10px' }}>
+                        <label style={{ fontSize: '14px', color: '#666', marginRight: '8px' }}>학습 모드:</label>
+                        <select
+                          value={video.scaffolding_mode}
+                          onChange={(e) => handleChangeMode(video, e.target.value)}
+                          className="form-input"
+                          style={{ 
+                            display: 'inline-block', 
+                            width: 'auto', 
+                            padding: '4px 8px',
+                            fontSize: '14px'
+                          }}
+                        >
+                          <option value="none">없음</option>
+                          <option value="prompt">질문만</option>
+                          <option value="chat">채팅만</option>
+                          <option value="both">둘 다</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => handleToggleLearning(video)}
+                        className="btn btn-secondary"
+                        style={{ fontSize: '14px' }}
+                      >
+                        {video.learning_enabled ? '학습 잠금' : '학습 열기'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingVideo(video)
+                          setShowForm(true)
+                        }}
+                        className="btn btn-secondary"
+                      >
+                        수정
+                      </button>
+                      <button
+                        onClick={() => handleDeleteVideo(video.id)}
+                        className="btn btn-danger"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
+              ))}
+            </div>
+          )}
+        </>
+      )}
+      
+      {/* Questions Management Tab */}
+      {activeTab === 'questions' && (
+        <div>
+          {!selectedVideo ? (
+            <div>
+              <h2 style={{ marginBottom: '20px' }}>비디오를 선택하세요</h2>
+              <div style={{ display: 'grid', gap: '15px' }}>
+                {videos.map((video) => (
+                  <div
+                    key={video.id}
+                    className="card"
+                    style={{ cursor: 'pointer', transition: 'all 0.2s' }}
                     onClick={() => {
-                      setEditingVideo(video)
-                      setShowForm(true)
+                      setSelectedVideo(video)
+                      fetchScaffoldings(video.id)
                     }}
-                    className="btn btn-secondary"
                   >
-                    수정
-                  </button>
-                  <button
-                    onClick={() => handleDelete(video.id)}
-                    className="btn btn-danger"
-                  >
-                    삭제
-                  </button>
-                </div>
+                    <h3>{video.title}</h3>
+                    <p style={{ fontSize: '14px', color: '#666', marginTop: '5px' }}>
+                      모드: {video.scaffolding_mode}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          ) : (
+            <ScaffoldingManager
+              video={selectedVideo}
+              scaffoldings={scaffoldings}
+              onSave={handleSaveScaffolding}
+              onDelete={handleDeleteScaffolding}
+              onBack={() => setSelectedVideo(null)}
+            />
+          )}
         </div>
+      )}
+
+      {/* Prompt Engineering Tab */}
+      {activeTab === 'prompts' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+            <button
+              onClick={() => {
+                setEditingPrompt(null)
+                setShowPromptForm(true)
+              }}
+              className="btn btn-primary"
+            >
+              프롬프트 추가
+            </button>
+          </div>
+          
+          {showPromptForm ? (
+            <PromptForm
+              prompt={editingPrompt}
+              onSave={handleSavePrompt}
+              onCancel={() => {
+                setShowPromptForm(false)
+                setEditingPrompt(null)
+              }}
+            />
+          ) : (
+            <div style={{ display: 'grid', gap: '20px' }}>
+              {prompts.map((prompt) => (
+                <div key={prompt.id} className="card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '15px' }}>
+                    <div style={{ flex: 1 }}>
+                      <h3>
+                        {prompt.name}
+                        {prompt.is_default && (
+                          <span style={{
+                            marginLeft: '10px',
+                            padding: '4px 8px',
+                            backgroundColor: '#4CAF50',
+                            color: 'white',
+                            borderRadius: '3px',
+                            fontSize: '12px'
+                          }}>
+                            기본
+                          </span>
+                        )}
+                        {!prompt.is_active && (
+                          <span style={{
+                            marginLeft: '10px',
+                            padding: '4px 8px',
+                            backgroundColor: '#f44336',
+                            color: 'white',
+                            borderRadius: '3px',
+                            fontSize: '12px'
+                          }}>
+                            비활성
+                          </span>
+                        )}
+                      </h3>
+                      <p style={{ color: '#666', margin: '5px 0' }}>{prompt.description}</p>
+                      <p style={{ fontSize: '14px', color: '#666' }}>
+                        버전: {prompt.version} | 
+                        {prompt.video_id && ` 비디오 ID: ${prompt.video_id} |`}
+                        {prompt.user_role && ` 권한: ${prompt.user_role}`}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={() => handleTogglePromptActive(prompt.id, prompt.is_active)}
+                        className="btn btn-secondary"
+                      >
+                        {prompt.is_active ? '비활성화' : '활성화'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingPrompt(prompt)
+                          setShowPromptForm(true)
+                        }}
+                        className="btn btn-secondary"
+                      >
+                        수정
+                      </button>
+                      <button
+                        onClick={() => handleDeletePrompt(prompt.id)}
+                        className="btn btn-danger"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div style={{ marginTop: '15px' }}>
+                    <h4 style={{ marginBottom: '10px', fontSize: '14px' }}>시스템 프롬프트:</h4>
+                    <div style={{
+                      backgroundColor: '#f5f5f5',
+                      padding: '15px',
+                      borderRadius: '5px',
+                      whiteSpace: 'pre-wrap',
+                      fontSize: '14px',
+                      fontFamily: 'monospace',
+                      maxHeight: '200px',
+                      overflow: 'auto'
+                    }}>
+                      {prompt.system_prompt}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
@@ -125,7 +484,11 @@ const VideoForm = ({ video, onSave, onCancel }) => {
     youtube_id: video?.youtube_id || '',
     description: video?.description || '',
     scaffolding_mode: video?.scaffolding_mode || 'both',
-    order_index: video?.order_index || 0
+    order_index: video?.order_index || 0,
+    is_active: video?.is_active !== undefined ? video.is_active : true,
+    learning_enabled: video?.learning_enabled !== undefined ? video.learning_enabled : false,
+    survey_url: video?.survey_url || '',
+    intro_text: video?.intro_text || ''
   })
 
   const handleSubmit = (e) => {
@@ -193,6 +556,325 @@ const VideoForm = ({ video, onSave, onCancel }) => {
           </select>
         </div>
         
+        <div className="form-group">
+          <label className="form-label">순서</label>
+          <input
+            type="number"
+            className="form-input"
+            value={formData.order_index}
+            onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) })}
+            min="0"
+          />
+        </div>
+        
+        <div className="form-group">
+          <label className="form-label">설문조사 URL (선택사항)</label>
+          <input
+            type="url"
+            className="form-input"
+            value={formData.survey_url}
+            onChange={(e) => setFormData({ ...formData, survey_url: e.target.value })}
+            placeholder="https://docs.google.com/forms/d/e/..."
+          />
+          <small style={{ color: '#666', fontSize: '13px', marginTop: '5px', display: 'block' }}>
+            구글 폼 등 설문조사 링크를 입력하세요. 학습 완료 후 <strong style={{ color: '#d32f2f' }}>필수로</strong> 진행됩니다.
+          </small>
+        </div>
+        
+        <div className="form-group">
+          <label className="form-label">학습 시작 안내 텍스트 (선택사항)</label>
+          <textarea
+            className="form-input"
+            value={formData.intro_text}
+            onChange={(e) => setFormData({ ...formData, intro_text: e.target.value })}
+            placeholder="학습을 시작하기 전에 학생들에게 보여줄 안내 메시지를 입력하세요..."
+            rows="6"
+            style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.5' }}
+          />
+          <small style={{ color: '#666', fontSize: '13px', marginTop: '5px', display: 'block' }}>
+            학습 단계 1에서 표시될 안내 메시지입니다. 학습 목표, 주의사항 등을 포함할 수 있습니다.
+          </small>
+        </div>
+        
+        <div className="form-group">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={formData.is_active}
+              onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+            />
+            <span>활성 상태</span>
+          </label>
+        </div>
+        
+        <div className="form-group">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={formData.learning_enabled}
+              onChange={(e) => setFormData({ ...formData, learning_enabled: e.target.checked })}
+            />
+            <span>학습 허용</span>
+          </label>
+        </div>
+        
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <button type="submit" className="btn btn-primary">저장</button>
+          <button type="button" onClick={onCancel} className="btn btn-secondary">취소</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+const ScaffoldingManager = ({ video, scaffoldings, onSave, onDelete, onBack }) => {
+  const [editing, setEditing] = useState(null)
+  const [showForm, setShowForm] = useState(false)
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          <button onClick={onBack} className="btn btn-secondary" style={{ marginBottom: '10px' }}>
+            ← 뒤로가기
+          </button>
+          <h2>{video.title} - 학습질문 관리</h2>
+        </div>
+        <button
+          onClick={() => {
+            setEditing(null)
+            setShowForm(true)
+          }}
+          className="btn btn-primary"
+        >
+          질문 추가
+        </button>
+      </div>
+
+      {showForm ? (
+        <div className="card">
+          <h3>{editing ? '질문 수정' : '질문 추가'}</h3>
+          <ScaffoldingForm
+            scaffolding={editing}
+            onSave={(data) => {
+              onSave(data)
+              setShowForm(false)
+              setEditing(null)
+            }}
+            onCancel={() => {
+              setShowForm(false)
+              setEditing(null)
+            }}
+          />
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '15px' }}>
+          {scaffoldings.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              아직 등록된 학습질문이 없습니다
+            </div>
+          ) : (
+            scaffoldings.map((scaffolding, index) => (
+              <div key={scaffolding.id} className="card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                  <div style={{ flex: 1 }}>
+                    <h4>질문 {index + 1}: {scaffolding.title}</h4>
+                    <p style={{ color: '#666', marginTop: '10px', whiteSpace: 'pre-wrap' }}>
+                      {scaffolding.prompt_text}
+                    </p>
+                    <p style={{ fontSize: '14px', color: '#999', marginTop: '5px' }}>
+                      순서: {scaffolding.order_index}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      onClick={() => {
+                        setEditing(scaffolding)
+                        setShowForm(true)
+                      }}
+                      className="btn btn-secondary"
+                    >
+                      수정
+                    </button>
+                    <button
+                      onClick={() => onDelete(scaffolding.id)}
+                      className="btn btn-danger"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const ScaffoldingForm = ({ scaffolding, onSave, onCancel }) => {
+  const [formData, setFormData] = useState({
+    title: scaffolding?.title || '',
+    prompt_text: scaffolding?.prompt_text || '',
+    order_index: scaffolding?.order_index || 0
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (scaffolding) {
+      onSave({ ...formData, id: scaffolding.id })
+    } else {
+      onSave(formData)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="form-group">
+        <label className="form-label">질문 제목</label>
+        <input
+          type="text"
+          className="form-input"
+          value={formData.title}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          placeholder="예: 이 영상에서 가장 인상 깊었던 장면은?"
+          required
+        />
+      </div>
+      
+      <div className="form-group">
+        <label className="form-label">질문 내용</label>
+        <textarea
+          className="form-textarea"
+          value={formData.prompt_text}
+          onChange={(e) => setFormData({ ...formData, prompt_text: e.target.value })}
+          placeholder="학습자가 답변할 질문을 입력하세요"
+          rows="5"
+          required
+        />
+      </div>
+      
+      <div className="form-group">
+        <label className="form-label">순서</label>
+        <input
+          type="number"
+          className="form-input"
+          value={formData.order_index}
+          onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) })}
+          min="0"
+        />
+      </div>
+      
+      <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+        <button type="submit" className="btn btn-primary">저장</button>
+        <button type="button" onClick={onCancel} className="btn btn-secondary">취소</button>
+      </div>
+    </form>
+  )
+}
+
+const PromptForm = ({ prompt, onSave, onCancel }) => {
+  const [formData, setFormData] = useState({
+    name: prompt?.name || '',
+    description: prompt?.description || '',
+    system_prompt: prompt?.system_prompt || '',
+    constraints: prompt?.constraints || '',
+    video_id: prompt?.video_id || '',
+    user_role: prompt?.user_role || '',
+    is_default: prompt?.is_default || false
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSave(formData)
+  }
+
+  return (
+    <div className="card">
+      <h2>{prompt ? '프롬프트 수정' : '프롬프트 추가'}</h2>
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label className="form-label">이름</label>
+          <input
+            type="text"
+            className="form-input"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label className="form-label">설명</label>
+          <textarea
+            className="form-textarea"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            style={{ minHeight: '80px' }}
+          />
+        </div>
+        
+        <div className="form-group">
+          <label className="form-label">시스템 프롬프트</label>
+          <CodeMirror
+            value={formData.system_prompt}
+            height="300px"
+            extensions={[javascript()]}
+            onChange={(value) => setFormData({ ...formData, system_prompt: value })}
+            theme="light"
+          />
+        </div>
+        
+        <div className="form-group">
+          <label className="form-label">제약 조건 (JSON 형식)</label>
+          <textarea
+            className="form-textarea"
+            value={formData.constraints}
+            onChange={(e) => setFormData({ ...formData, constraints: e.target.value })}
+            placeholder='{"max_length": 500, "forbidden_topics": ["정치", "종교"]}'
+            style={{ minHeight: '100px', fontFamily: 'monospace' }}
+          />
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+          <div className="form-group">
+            <label className="form-label">비디오 ID (선택사항)</label>
+            <input
+              type="number"
+              className="form-input"
+              value={formData.video_id}
+              onChange={(e) => setFormData({ ...formData, video_id: e.target.value })}
+              placeholder="특정 비디오에만 적용"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label className="form-label">사용자 권한 (선택사항)</label>
+            <select
+              className="form-input"
+              value={formData.user_role}
+              onChange={(e) => setFormData({ ...formData, user_role: e.target.value })}
+            >
+              <option value="">모든 권한</option>
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+              <option value="super">Super</option>
+            </select>
+          </div>
+        </div>
+        
+        <div className="form-group">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={formData.is_default}
+              onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
+            />
+            <span>기본 프롬프트로 설정</span>
+          </label>
+        </div>
+        
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
           <button type="submit" className="btn btn-primary">저장</button>
           <button type="button" onClick={onCancel} className="btn btn-secondary">취소</button>
@@ -203,4 +885,3 @@ const VideoForm = ({ video, onSave, onCancel }) => {
 }
 
 export default AdminVideos
-

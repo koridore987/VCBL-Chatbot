@@ -8,7 +8,7 @@ class Scaffolding(db.Model):
     video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False, index=True)
     
     title = db.Column(db.String(255), nullable=False)
-    prompt_text = db.Column(db.Text, nullable=False)
+    prompt_text = db.Column(db.Text, nullable=True)  # Allow empty prompt text
     order_index = db.Column(db.Integer, default=0)
     
     is_active = db.Column(db.Boolean, default=True)

@@ -1,11 +1,13 @@
-# 단순화된 Full-stack Dockerfile (SQLite + Google Cloud Run 최적화)
+# Full-stack Dockerfile (PostgreSQL + Google Cloud Run 최적화)
 FROM python:3.11-slim AS backend-builder
 
 WORKDIR /backend
 
-# 시스템 의존성 설치
+# 시스템 의존성 설치 (PostgreSQL 클라이언트 라이브러리 포함)
 RUN apt-get update && apt-get install -y \
     gcc \
+    libpq-dev \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # 백엔드 의존성 설치
@@ -31,9 +33,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# 런타임 의존성 설치
+# 런타임 의존성 설치 (PostgreSQL 클라이언트 라이브러리 포함)
 RUN apt-get update && apt-get install -y \
     nginx \
+    libpq5 \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # 백엔드 복사

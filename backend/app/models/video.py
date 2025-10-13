@@ -15,7 +15,10 @@ class Video(db.Model):
     # Scaffolding settings
     scaffolding_mode = db.Column(db.String(20), default='both')  # 'prompt', 'chat', 'both', 'none'
     is_active = db.Column(db.Boolean, default=True)
+    learning_enabled = db.Column(db.Boolean, default=False)  # 관리자가 열기 전까지 비활성화
     order_index = db.Column(db.Integer, default=0)
+    survey_url = db.Column(db.String(500))  # 구글폼 등 설문조사 URL
+    intro_text = db.Column(db.Text)  # 학습 시작 전 안내 텍스트
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -36,7 +39,10 @@ class Video(db.Model):
             'thumbnail_url': self.thumbnail_url,
             'scaffolding_mode': self.scaffolding_mode,
             'is_active': self.is_active,
+            'learning_enabled': self.learning_enabled,
             'order_index': self.order_index,
+            'survey_url': self.survey_url,
+            'intro_text': self.intro_text,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

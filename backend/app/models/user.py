@@ -5,8 +5,8 @@ class User(db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
+    student_id = db.Column(db.BigInteger, unique=True, nullable=False, index=True)  # 10자리 정수 학번
+    password_hash = db.Column(db.String(255), nullable=True)  # 사전등록시에는 비어있음
     name = db.Column(db.String(100), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='user')  # super, admin, user
     is_active = db.Column(db.Boolean, default=True)
@@ -23,6 +23,7 @@ class User(db.Model):
     chat_sessions = db.relationship('ChatSession', backref='user', lazy=True, cascade='all, delete-orphan')
     event_logs = db.relationship('EventLog', backref='user', lazy=True, cascade='all, delete-orphan')
     scaffolding_responses = db.relationship('ScaffoldingResponse', backref='user', lazy=True, cascade='all, delete-orphan')
+    survey_responses = db.relationship('SurveyResponse', back_populates='user', lazy=True, cascade='all, delete-orphan')
     
     def to_dict(self):
         return {

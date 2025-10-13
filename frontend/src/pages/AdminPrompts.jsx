@@ -16,7 +16,9 @@ const AdminPrompts = () => {
   const fetchPrompts = async () => {
     try {
       const response = await api.get('/admin/prompts')
-      setPrompts(response.data)
+      // 백엔드는 { data: [...] } 형태로 반환
+      const promptData = response.data.data || []
+      setPrompts(promptData)
     } catch (err) {
       console.error('Failed to fetch prompts:', err)
     } finally {
@@ -35,7 +37,9 @@ const AdminPrompts = () => {
       setEditingPrompt(null)
       fetchPrompts()
     } catch (err) {
-      alert('저장에 실패했습니다')
+      const errorMsg = err.response?.data?.error || '저장에 실패했습니다'
+      alert(`저장 실패: ${errorMsg}`)
+      console.error('Save error:', err.response?.data)
     }
   }
 
@@ -192,7 +196,44 @@ const PromptForm = ({ prompt, onSave, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    onSave(formData)
+    
+    // 필수 필드 검증
+    if (!formData.name || !formData.name.trim()) {
+      alert('프롬프트 이름을 입력해주세요')
+      return
+    }
+    
+    if (!formData.system_prompt || !formData.system_prompt.trim()) {
+      alert('시스템 프롬프트를 입력해주세요')
+      return
+    }
+    
+    // 빈 문자열을 null로 변환하고 불필요한 필드 제거
+    const cleanedData = {
+      name: formData.name.trim(),
+      system_prompt: formData.system_prompt.trim(),
+      is_default: formData.is_default
+    }
+    
+    // 선택 필드는 값이 있을 때만 포함
+    if (formData.description && formData.description.trim()) {
+      cleanedData.description = formData.description.trim()
+    }
+    
+    if (formData.constraints && formData.constraints.trim()) {
+      cleanedData.constraints = formData.constraints.trim()
+    }
+    
+    if (formData.video_id && formData.video_id !== '') {
+      cleanedData.video_id = Number(formData.video_id)
+    }
+    
+    if (formData.user_role && formData.user_role !== '') {
+      cleanedData.user_role = formData.user_role
+    }
+    
+    console.log('전송할 데이터:', cleanedData)
+    onSave(cleanedData)
   }
 
   return (

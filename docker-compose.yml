@@ -1,24 +1,78 @@
 version: '3.8'
 
 services:
+  # PostgreSQL 데이터베이스
+  db:
+    image: postgres:15-alpine
+    container_name: vcbl-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vcbl_chatbot
+      POSTGRES_USER: vcbl_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-vcbl_dev_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vcbl_user -d vcbl_chatbot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis (Rate Limiting용)
+  redis:
+    image: redis:7-alpine
+    container_name: vcbl-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # 애플리케이션
   app:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: vcbl-app
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
-      # SQLite 사용 (단순화)
-      DATABASE_URL: sqlite:///app/data/vcbl_chatbot.db
-      SECRET_KEY: dev-secret-key-change-in-production
+      # PostgreSQL 연결
+      DATABASE_URL: postgresql://vcbl_user:${DB_PASSWORD:-vcbl_dev_password}@db:5432/vcbl_chatbot
+      # Redis 연결
+      REDIS_URL: redis://redis:6379/0
+      # 보안
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-jwt-secret-key-change-in-production}
+      # OpenAI
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      MODEL_NAME: gpt-4o-mini
-      SUMMARY_TRIGGER_TOKENS: 3500
-      MAX_TOKENS_PER_REQUEST: 4000
-      MAX_TOKENS_OUTPUT: 1000
-      DAILY_TOKEN_LIMIT: 50000
+      MODEL_NAME: ${MODEL_NAME:-gpt-4o-mini}
+      SUMMARY_TRIGGER_TOKENS: ${SUMMARY_TRIGGER_TOKENS:-3500}
+      MAX_TOKENS_PER_REQUEST: ${MAX_TOKENS_PER_REQUEST:-4000}
+      MAX_TOKENS_OUTPUT: ${MAX_TOKENS_OUTPUT:-1000}
+      DAILY_TOKEN_LIMIT: ${DAILY_TOKEN_LIMIT:-50000}
+      # 서버 설정
       PORT: 8080
-    volumes:
-      # SQLite 데이터베이스 파일을 영구 저장
-      - ./data:/app/data
+      FLASK_ENV: ${FLASK_ENV:-production}
+      # CORS 설정
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
 
