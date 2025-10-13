@@ -1,22 +1,21 @@
-# Full-stack Dockerfile (Backend + Frontend)
+# 단순화된 Full-stack Dockerfile (SQLite + Google Cloud Run 최적화)
 FROM python:3.11-slim AS backend-builder
 
 WORKDIR /backend
 
-# Install system dependencies
+# 시스템 의존성 설치
 RUN apt-get update && apt-get install -y \
     gcc \
-    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install backend dependencies
+# 백엔드 의존성 설치
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code
+# 백엔드 코드 복사
 COPY backend/ .
 
-# Frontend build stage
+# 프론트엔드 빌드 단계
 FROM node:18-alpine AS frontend-builder
 
 WORKDIR /frontend
@@ -27,32 +26,31 @@ RUN npm ci
 COPY frontend/ .
 RUN npm run build
 
-# Final production stage
+# 최종 프로덕션 단계
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install runtime dependencies
+# 런타임 의존성 설치
 RUN apt-get update && apt-get install -y \
-    postgresql-client \
     nginx \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy backend
+# 백엔드 복사
 COPY --from=backend-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=backend-builder /backend /app/backend
 
-# Copy frontend build
+# 프론트엔드 빌드 복사
 COPY --from=frontend-builder /frontend/dist /app/frontend/dist
 
-# Copy nginx config
+# nginx 설정 복사
 COPY config/nginx-full.conf /etc/nginx/sites-available/default
 
-# Expose port
+# 포트 설정
 ENV PORT=8080
 EXPOSE 8080
 
-# Start script
+# 시작 스크립트 복사
 COPY scripts/start.sh /start.sh
 RUN chmod +x /start.sh
 

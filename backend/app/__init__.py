@@ -1,6 +1,5 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
@@ -10,15 +9,14 @@ import os
 load_dotenv()
 
 db = SQLAlchemy()
-migrate = Migrate()
 bcrypt = Bcrypt()
 jwt = JWTManager()
 
 def create_app():
     app = Flask(__name__)
     
-    # Configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://localhost/vcbl_chatbot')
+    # Configuration - SQLite로 변경
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///vcbl_chatbot.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     app.config['JWT_SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -36,10 +34,13 @@ def create_app():
     
     # Initialize extensions
     db.init_app(app)
-    migrate.init_app(app, db)
     bcrypt.init_app(app)
     jwt.init_app(app)
     CORS(app)
+    
+    # 데이터베이스 테이블 생성
+    with app.app_context():
+        db.create_all()
     
     # Register blueprints
     from app.routes.auth import auth_bp
