@@ -22,8 +22,11 @@ echo "Running database migrations..."
 cd /app/backend
 export FLASK_APP=run.py
 
-# Docker 환경에서는 항상 마이그레이션 실행
-flask db upgrade || echo "Migration failed or no migrations to apply"
+if ! flask db upgrade; then
+    echo "ERROR: Database migration failed!" >&2
+    exit 1
+fi
+echo "✓ Database migrations completed."
 
 # 초기 관리자 계정 생성 (존재하지 않을 경우에만)
 echo "Checking for initial admin account..."
@@ -76,12 +79,8 @@ with app.app_context():
 
 PYTHON_SCRIPT
 
-cd /app/backend
-
 # Gunicorn으로 Flask 애플리케이션 시작
 echo "Starting Gunicorn..."
-cd /app/backend
-
 # 워커 수 계산 (CPU 코어 수 * 2 + 1)
 WORKERS=${WORKERS:-$(( $(nproc) * 2 + 1 ))}
 echo "Starting with $WORKERS workers"
@@ -98,12 +97,3 @@ exec gunicorn \
     --access-logfile - \
     --error-logfile - \
     run:app
-
-# start.sh의 마이그레이션 코드 수정 (오류 포착을 위해)
-if [ "$FLASK_ENV" = "production" ] && [ -n "$CLOUD_SQL_INSTANCE" ]; then
-    echo "Running database migrations..."
-    cd /app/backend
-    export FLASK_APP=run.py
-    # 오류 메시지를 명확히 출력
-    flask db upgrade 2>&1 || { echo "ERROR: Database migration failed!"; exit 1; }
-fi
