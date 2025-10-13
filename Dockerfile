@@ -40,8 +40,9 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# 백엔드 복사
+# 백엔드 복사 (Python 패키지 및 실행 파일)
 COPY --from=backend-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=backend-builder /usr/local/bin /usr/local/bin
 COPY --from=backend-builder /backend /app/backend
 
 # 프론트엔드 빌드 복사
