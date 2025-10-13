@@ -43,7 +43,7 @@ with app.app_context():
     else:
         # 환경 변수에서 관리자 정보 가져오기 (없으면 기본값 사용)
         import os
-        admin_student_id = os.getenv('ADMIN_STUDENT_ID', 'super')
+        admin_student_id = os.getenv('ADMIN_STUDENT_ID', '9999000001')
         admin_name = os.getenv('ADMIN_NAME', 'Super Administrator')
         admin_password = os.getenv('ADMIN_PASSWORD', 'super1234')
         
