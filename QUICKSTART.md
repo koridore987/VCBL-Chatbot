@@ -46,32 +46,28 @@ docker-compose logs -f app
 
 브라우저에서 http://localhost:8080 접속
 
-처음 접속 시 회원가입 후 사용하세요.
+**초기 관리자 계정** (자동 생성됨):
+- 학번: `super`
+- 비밀번호: `super1234`
 
-### 관리자 계정 생성 (선택사항)
+> ⚠️ **보안 경고**: 첫 로그인 후 반드시 비밀번호를 변경하세요!
+
+### 관리자 계정 커스터마이징 (선택사항)
+
+`.env` 파일에서 초기 관리자 계정 정보를 변경할 수 있습니다:
 
 ```bash
-# 컨테이너 내부에 접속
-docker-compose exec app bash
+# 초기 관리자 계정 설정
+ADMIN_STUDENT_ID=super
+ADMIN_NAME=Super Administrator
+ADMIN_PASSWORD=super1234
+```
 
-# 관리자 생성 스크립트 실행
-cd backend
-python -c "
-from app import create_app, db, bcrypt
-from app.models.user import User
+변경 후 컨테이너를 재시작하세요:
 
-app = create_app()
-with app.app_context():
-    admin = User(
-        student_id='admin001',
-        name='관리자',
-        hashed_password=bcrypt.generate_password_hash('admin123').decode('utf-8'),
-        is_admin=True
-    )
-    db.session.add(admin)
-    db.session.commit()
-    print('관리자 계정 생성 완료!')
-"
+```bash
+docker-compose down
+docker-compose up -d
 ```
 
 ### 중지 및 재시작

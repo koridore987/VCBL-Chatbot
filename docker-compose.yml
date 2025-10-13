@@ -64,6 +64,10 @@ services:
       FLASK_ENV: ${FLASK_ENV:-production}
       # CORS 설정
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      # 초기 관리자 계정 설정
+      ADMIN_STUDENT_ID: ${ADMIN_STUDENT_ID:-super}
+      ADMIN_NAME: ${ADMIN_NAME:-Super Administrator}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-super1234}
     depends_on:
       db:
         condition: service_healthy
