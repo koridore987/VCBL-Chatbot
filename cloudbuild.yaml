@@ -1,12 +1,20 @@
-# Google Cloud Build 설정 (GitHub Actions와 호환)
+# Google Cloud Build 설정 (Artifact Registry + Cloud Run)
 steps:
-  # 1. Docker 이미지 빌드
+  # 1. Docker 이미지 빌드 (Artifact Registry 경로)
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/vcbl-chatbot:$BUILD_ID', '-f', 'Dockerfile', '.']
+    args:
+      - 'build'
+      - '-t'
+      - 'asia-northeast3-docker.pkg.dev/$PROJECT_ID/vcbl-chatbot/vcbl-chatbot:$BUILD_ID'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
 
-  # 2. 컨테이너를 Container Registry에 푸시
+  # 2. Artifact Registry에 푸시
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/vcbl-chatbot:$BUILD_ID']
+    args:
+      - 'push'
+      - 'asia-northeast3-docker.pkg.dev/$PROJECT_ID/vcbl-chatbot/vcbl-chatbot:$BUILD_ID'
 
   # 3. Cloud Run에 배포 (Cloud SQL + Secret Manager 통합)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -15,7 +23,7 @@ steps:
       - 'run'
       - 'deploy'
       - 'vcbl-chatbot'
-      - '--image=gcr.io/$PROJECT_ID/vcbl-chatbot:$BUILD_ID'
+      - '--image=asia-northeast3-docker.pkg.dev/$PROJECT_ID/vcbl-chatbot/vcbl-chatbot:$BUILD_ID'
       - '--platform=managed'
       - '--region=asia-northeast3'
       - '--allow-unauthenticated'
@@ -26,8 +34,8 @@ steps:
       - '--min-instances=1'
       - '--timeout=300'
       - '--concurrency=80'
-      # 일반 환경 변수
-      - '--set-env-vars=FLASK_ENV=production,CLOUD_SQL_INSTANCE=$PROJECT_ID:asia-northeast3:vcbl-chatbot-db,DB_USER=vcbl_user,DB_NAME=vcbl_chatbot'
+      # 일반 환경 변수 + CORS
+      - '--set-env-vars=FLASK_ENV=production,CLOUD_SQL_INSTANCE=$PROJECT_ID:asia-northeast3:vcbl-chatbot-db,DB_USER=vcbl_user,DB_NAME=vcbl_chatbot,CORS_ORIGINS=https://vcbl-chatbot-439778352765.asia-northeast3.run.app'
       # Cloud SQL 연결
       - '--add-cloudsql-instances=$PROJECT_ID:asia-northeast3:vcbl-chatbot-db'
       # Secret Manager 시크릿 (민감 정보)
