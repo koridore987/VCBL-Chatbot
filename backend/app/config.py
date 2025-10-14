@@ -136,7 +136,8 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     RATELIMIT_ENABLED = True
-    RATELIMIT_STORAGE_URL = get_ratelimit_storage_url(require_distributed=True)
+    # 초기화 시점에 검증/설정 (app/__init__.py에서 수행)
+    RATELIMIT_STORAGE_URL = os.getenv('RATELIMIT_STORAGE_URL') or os.getenv('REDIS_URL') or 'memory://'
     
     # 프로덕션에서는 HTTPS만 허용
     SESSION_COOKIE_SECURE = True

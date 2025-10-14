@@ -1,0 +1,67 @@
+name: Deploy Staging (develop)
+
+on:
+  push:
+    branches: [ "develop" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      REGION: ${{ secrets.STG_GCP_REGION }}
+      PROJECT_ID: ${{ secrets.STG_GCP_PROJECT_ID }}
+      SERVICE_NAME: ${{ secrets.STG_CLOUDRUN_SERVICE_NAME }}
+      REPOSITORY: ${{ secrets.STG_ARTIFACT_REGISTRY_REPO }}
+      REG_HOST: ${{ secrets.STG_ARTIFACT_REGISTRY_HOST }}
+      IMAGE_NAME: ${{ secrets.STG_IMAGE_NAME }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.STG_GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REG_HOST }} --quiet
+
+      - name: Set image metadata
+        id: meta
+        run: |
+          SHA_TAG=${GITHUB_SHA::7}
+          echo "sha_tag=$SHA_TAG" >> $GITHUB_OUTPUT
+          echo "image=${{ env.REG_HOST }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_OUTPUT
+
+      - name: Build and push image
+        run: |
+          docker build -t "${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.sha_tag }}" -t "${{ steps.meta.outputs.image }}:staging" .
+          docker push "${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.sha_tag }}"
+          docker push "${{ steps.meta.outputs.image }}:staging"
+
+      - name: Deploy to Cloud Run (staging)
+        run: |
+          gcloud run deploy "${{ env.SERVICE_NAME }}" \
+            --image "${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.sha_tag }}" \
+            --region "${{ env.REGION }}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars "FLASK_ENV=production" \
+            --set-env-vars "OPENAI_API_KEY=${{ secrets.STG_OPENAI_API_KEY }}" \
+            --set-env-vars "SECRET_KEY=${{ secrets.STG_SECRET_KEY }}" \
+            --set-env-vars "JWT_SECRET_KEY=${{ secrets.STG_JWT_SECRET_KEY }}" \
+            --set-env-vars "DATABASE_URL=${{ secrets.STG_DATABASE_URL }}" \
+            --set-env-vars "REDIS_URL=${{ secrets.STG_REDIS_URL }}" \
+            --set-env-vars "CORS_ORIGINS=${{ secrets.STG_CORS_ORIGINS }}"
+
+
