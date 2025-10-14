@@ -3,8 +3,6 @@ name: Deploy to Google Cloud Run
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -13,6 +11,7 @@ env:
 
 jobs:
   deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     
     permissions:
@@ -23,15 +22,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Auth to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
       with:
-        service_account_key: ${{ secrets.GCP_SA_KEY }}
         project_id: ${{ secrets.GCP_PROJECT_ID }}
 
     - name: Configure Docker to use gcloud as a credential helper
       run: |
-        gcloud auth configure-docker gcr.io
+        gcloud auth configure-docker gcr.io --quiet
 
     - name: Build and push Docker image
       run: |
@@ -75,7 +79,7 @@ jobs:
           --min-instances 1 \
           --timeout 300 \
           --concurrency 80 \
-          --set-env-vars FLASK_ENV=production,CLOUD_SQL_INSTANCE=$PROJECT_ID:asia-northeast3:vcbl-chatbot-db,DB_USER=vcbl_user,DB_NAME=vcbl_chatbot \
+          --set-env-vars FLASK_ENV=production,CLOUD_SQL_INSTANCE=$PROJECT_ID:asia-northeast3:vcbl-chatbot-db,DB_USER=vcbl_user,DB_NAME=vcbl_chatbot,CORS_ORIGINS=https://vcbl-chatbot-439778352765.asia-northeast3.run.app \
           --set-cloudsql-instances $PROJECT_ID:asia-northeast3:vcbl-chatbot-db \
           --set-secrets DB_PASSWORD=vcbl-db-password:latest,OPENAI_API_KEY=vcbl-openai-key:latest,SECRET_KEY=vcbl-secret-key:latest,JWT_SECRET_KEY=vcbl-jwt-secret:latest
 

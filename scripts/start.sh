@@ -12,21 +12,19 @@ else
     export CLOUD_RUN=false
 fi
 
-# Nginx 설정 (Cloud Run에서는 필요 없음)
-if [ "$CLOUD_RUN" = "false" ]; then
-    echo "Configuring Nginx..."
-    # PORT 환경 변수가 없으면 기본값 8080 사용
-    export PORT=${PORT:-8080}
+# Nginx 설정 및 시작 (로컬/Cloud Run 공통)
+echo "Configuring Nginx..."
+# PORT 환경 변수가 없으면 기본값 8080 사용 (Nginx 수신 포트)
+export PORT=${PORT:-8080}
 
-    # Nginx 설정 파일에서 포트 치환
-    if [ -f /etc/nginx/sites-available/default ]; then
-        sed -i "s/listen 8080/listen $PORT/g" /etc/nginx/sites-available/default
-    fi
-
-    # Nginx 시작
-    echo "Starting Nginx..."
-    nginx
+# Nginx 설정 파일에서 포트 치환
+if [ -f /etc/nginx/sites-available/default ]; then
+    sed -i "s/listen 8080/listen $PORT/g" /etc/nginx/sites-available/default
 fi
+
+# Nginx 시작
+echo "Starting Nginx..."
+nginx
 
 # 데이터베이스 연결 확인
 echo "Checking database connection..."
@@ -101,10 +99,10 @@ echo "Starting Gunicorn..."
 
 # Cloud Run 환경에 따른 설정
 if [ "$CLOUD_RUN" = "true" ]; then
-    # Cloud Run: 단일 워커, 높은 동시성
-    echo "🚀 Cloud Run configuration: Single worker with high concurrency"
+    # Cloud Run: Nginx(수신 8080) → Gunicorn(내부 5000)
+    echo "🚀 Cloud Run configuration: Nginx on $PORT proxying to Gunicorn :5000"
     exec gunicorn \
-        --bind 0.0.0.0:8080 \
+        --bind 0.0.0.0:5000 \
         --workers 1 \
         --threads 8 \
         --worker-class gthread \
