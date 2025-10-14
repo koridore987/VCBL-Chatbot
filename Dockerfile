@@ -25,7 +25,7 @@ WORKDIR /frontend
 
 # 의존성 설치 (캐시 최적화)
 COPY frontend/package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # 소스 코드 복사 및 빌드
 COPY frontend/ .
