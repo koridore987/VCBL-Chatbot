@@ -1,0 +1,44 @@
+# Google Cloud Build 설정 (PostgreSQL + Cloud SQL + Secret Manager 통합)
+steps:
+  # 1. 백엔드 빌드
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/vcbl-chatbot-backend', '-f', 'Dockerfile', '.']
+    dir: '.'
+
+  # 2. 컨테이너를 Container Registry에 푸시
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/vcbl-chatbot-backend']
+
+  # 3. Cloud Run에 배포 (Cloud SQL + Secret Manager 통합)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'vcbl-chatbot'
+      - '--image=gcr.io/$PROJECT_ID/vcbl-chatbot-backend'
+      - '--platform=managed'
+      - '--region=asia-northeast3'
+      - '--allow-unauthenticated'
+      - '--port=8080'
+      - '--memory=2Gi'
+      - '--cpu=2'
+      - '--max-instances=10'
+      - '--min-instances=1'
+      - '--timeout=300'
+      - '--concurrency=80'
+      - '--set-env-vars=FLASK_ENV=production'
+      - '--add-cloudsql-instances=$PROJECT_ID:asia-northeast3:vcbl-chatbot-db'
+      - '--set-secrets=DATABASE_URL=vcbl-database-url:latest,OPENAI_API_KEY=vcbl-openai-key:latest,SECRET_KEY=vcbl-secret-key:latest,JWT_SECRET_KEY=vcbl-jwt-secret:latest'
+
+# 빌드 옵션
+options:
+  machineType: 'E2_HIGHCPU_8'
+  diskSizeGb: 100
+  logging: CLOUD_LOGGING_ONLY
+
+# 타임아웃 설정 (분)
+timeout: '1200s'
+
+# 서비스 계정 (Cloud SQL 및 Secret Manager 접근 권한 필요)
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/vcbl-deploy@$PROJECT_ID.iam.gserviceaccount.com'
