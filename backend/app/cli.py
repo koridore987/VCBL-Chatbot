@@ -7,6 +7,7 @@ import os
 import sys
 from flask import Flask
 from flask_migrate import Migrate, upgrade, downgrade, current, history
+from sqlalchemy import text
 from app import create_app
 from app.models import db
 
@@ -97,7 +98,7 @@ def health():
     with app.app_context():
         try:
             # 데이터베이스 연결 테스트
-            db.session.execute('SELECT 1')
+            db.session.execute(text('SELECT 1'))
             click.echo("✅ 데이터베이스 연결: 정상")
         except Exception as e:
             click.echo(f"❌ 데이터베이스 연결 오류: {e}")

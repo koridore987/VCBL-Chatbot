@@ -1,13 +1,12 @@
-# Google Cloud Build 설정 (PostgreSQL + Cloud SQL + Secret Manager 통합)
+# Google Cloud Build 설정 (GitHub Actions와 호환)
 steps:
-  # 1. 백엔드 빌드
+  # 1. Docker 이미지 빌드
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/vcbl-chatbot-backend', '-f', 'Dockerfile', '.']
-    dir: '.'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/vcbl-chatbot:$BUILD_ID', '-f', 'Dockerfile', '.']
 
   # 2. 컨테이너를 Container Registry에 푸시
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/vcbl-chatbot-backend']
+    args: ['push', 'gcr.io/$PROJECT_ID/vcbl-chatbot:$BUILD_ID']
 
   # 3. Cloud Run에 배포 (Cloud SQL + Secret Manager 통합)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -16,7 +15,7 @@ steps:
       - 'run'
       - 'deploy'
       - 'vcbl-chatbot'
-      - '--image=gcr.io/$PROJECT_ID/vcbl-chatbot-backend'
+      - '--image=gcr.io/$PROJECT_ID/vcbl-chatbot:$BUILD_ID'
       - '--platform=managed'
       - '--region=asia-northeast3'
       - '--allow-unauthenticated'

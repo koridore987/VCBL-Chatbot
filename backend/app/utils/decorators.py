@@ -105,7 +105,12 @@ def validate_request(schema):
                 if data is None:
                     return error_response('요청 본문이 비어있습니다', 400)
                 
-                logger.info(f"Request data before validation: {data}")
+                # 🔒 보안: 비밀번호 필드 마스킹 (프로덕션 배포용)
+                safe_data = {
+                    k: '***' if k in ['password', 'old_password', 'new_password'] else v 
+                    for k, v in data.items()
+                }
+                logger.info(f"Request data before validation: {safe_data}")
                 
                 # Pydantic 검증
                 validated_data = schema(**data)

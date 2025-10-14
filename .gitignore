@@ -3,8 +3,7 @@
 # ===================================
 .env
 .env.*
-!.env.example
-!dev/.env.local.example
+secrets/
 
 # ===================================
 # Python
@@ -120,3 +119,24 @@ Thumbs.db
 # ===================================
 *.tmp
 *.temp
+
+# ===================================
+# Documentation & Dev Files
+# ===================================
+docs/
+dev_guides/
+dev/
+*.md.backup
+README-*.md
+QUICKSTART.md
+
+# ===================================
+# Config Examples
+# ===================================
+env.example
+*.example
+
+# ===================================
+# Deployment
+# ===================================
+vcbl-deploy-key.json    

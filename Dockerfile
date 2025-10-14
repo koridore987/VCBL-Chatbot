@@ -10,9 +10,10 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# 백엔드 의존성 설치
+# 백엔드 의존성 설치 (캐시 최적화)
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # 백엔드 코드 복사
 COPY backend/ .
@@ -22,9 +23,11 @@ FROM node:18-alpine AS frontend-builder
 
 WORKDIR /frontend
 
+# 의존성 설치 (캐시 최적화)
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm ci --only=production
 
+# 소스 코드 복사 및 빌드
 COPY frontend/ .
 RUN npm run build
 
@@ -38,7 +41,8 @@ RUN apt-get update && apt-get install -y \
     nginx \
     libpq5 \
     postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # 백엔드 복사 (Python 패키지 및 실행 파일)
 COPY --from=backend-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
