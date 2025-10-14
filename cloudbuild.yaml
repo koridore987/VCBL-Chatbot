@@ -16,6 +16,34 @@ steps:
       - 'push'
       - 'gcr.io/$PROJECT_ID/vcbl-chatbot:$BUILD_ID'
 
+  # 2.5. 데이터베이스 마이그레이션 (Cloud Run Job로 실행)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        JOB_NAME=vcbl-migrate-$BUILD_ID
+        IMAGE_URI=gcr.io/$PROJECT_ID/vcbl-chatbot:$BUILD_ID
+        # 기존 동일 이름 Job 삭제 (있어도 무시)
+        gcloud run jobs delete "$JOB_NAME" --region=asia-northeast3 --quiet || true
+        # Job 생성
+        gcloud run jobs create "$JOB_NAME" \
+          --image "$IMAGE_URI" \
+          --region asia-northeast3 \
+          --set-env-vars FLASK_ENV=production,CLOUD_SQL_INSTANCE=$PROJECT_ID:asia-northeast3:vcbl-chatbot-db,DB_USER=vcbl_user,DB_NAME=vcbl_chatbot \
+          --set-cloudsql-instances $PROJECT_ID:asia-northeast3:vcbl-chatbot-db \
+          --set-secrets DB_PASSWORD=vcbl-db-password:latest,OPENAI_API_KEY=vcbl-openai-key:latest,SECRET_KEY=vcbl-secret-key:latest,JWT_SECRET_KEY=vcbl-jwt-secret:latest \
+          --command flask \
+          --args db,upgrade \
+          --max-retries 3 \
+          --parallelism 1 \
+          --task-count 1
+        # Job 실행 및 완료 대기
+        gcloud run jobs execute "$JOB_NAME" --region=asia-northeast3 --wait
+        # 정리: Job 삭제(선택)
+        gcloud run jobs delete "$JOB_NAME" --region=asia-northeast3 --quiet || true
+
   # 3. Cloud Run에 배포 (Cloud SQL + Secret Manager 통합)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
