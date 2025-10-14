@@ -27,9 +27,12 @@ steps:
       - '--min-instances=1'
       - '--timeout=300'
       - '--concurrency=80'
-      - '--set-env-vars=FLASK_ENV=production'
+      # 일반 환경 변수
+      - '--set-env-vars=FLASK_ENV=production,CLOUD_SQL_INSTANCE=$PROJECT_ID:asia-northeast3:vcbl-chatbot-db,DB_USER=vcbl_user,DB_NAME=vcbl_chatbot'
+      # Cloud SQL 연결
       - '--add-cloudsql-instances=$PROJECT_ID:asia-northeast3:vcbl-chatbot-db'
-      - '--set-secrets=DATABASE_URL=vcbl-database-url:latest,OPENAI_API_KEY=vcbl-openai-key:latest,SECRET_KEY=vcbl-secret-key:latest,JWT_SECRET_KEY=vcbl-jwt-secret:latest'
+      # Secret Manager 시크릿 (민감 정보)
+      - '--set-secrets=DB_PASSWORD=vcbl-db-password:latest,OPENAI_API_KEY=vcbl-openai-key:latest,SECRET_KEY=vcbl-secret-key:latest,JWT_SECRET_KEY=vcbl-jwt-secret:latest'
 
 # 빌드 옵션
 options:

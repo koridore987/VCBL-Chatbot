@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # PostgreSQL 데이터베이스
+  # PostgreSQL 데이터베이스 (로컬 개발 권장)
   db:
     image: postgres:15-alpine
     container_name: vcbl-postgres
@@ -20,7 +20,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis (Rate Limiting용)
+  # Redis (Rate Limiting용 - 선택사항)
   redis:
     image: redis:7-alpine
     container_name: vcbl-redis
@@ -45,13 +45,16 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # PostgreSQL 연결
+      # PostgreSQL 연결 (docker-compose 네트워크)
       DATABASE_URL: postgresql://vcbl_user:${DB_PASSWORD:-vcbl_dev_password}@db:5432/vcbl_chatbot
-      # Redis 연결
+      
+      # Redis 연결 (선택사항)
       REDIS_URL: redis://redis:6379/0
-      # 보안
+      
+      # 보안 (개발 환경용 - 프로덕션에서는 강력한 키 사용)
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-jwt-secret-key-change-in-production}
+      
       # OpenAI
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       MODEL_NAME: ${MODEL_NAME:-gpt-4o-mini}
@@ -59,15 +62,20 @@ services:
       MAX_TOKENS_PER_REQUEST: ${MAX_TOKENS_PER_REQUEST:-4000}
       MAX_TOKENS_OUTPUT: ${MAX_TOKENS_OUTPUT:-1000}
       DAILY_TOKEN_LIMIT: ${DAILY_TOKEN_LIMIT:-50000}
+      
       # 서버 설정
       PORT: 8080
-      FLASK_ENV: ${FLASK_ENV:-production}
+      FLASK_ENV: ${FLASK_ENV:-development}
+      
       # CORS 설정
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
-      # 초기 관리자 계정 설정
+      
+      # 초기 관리자 계정 설정 (Docker Compose에서는 자동 생성 비활성화됨)
+      # CLI 명령어로 생성: docker-compose exec app flask init-admin
       ADMIN_STUDENT_ID: ${ADMIN_STUDENT_ID:-super}
       ADMIN_NAME: ${ADMIN_NAME:-Super Administrator}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-super1234}
+    
     depends_on:
       db:
         condition: service_healthy

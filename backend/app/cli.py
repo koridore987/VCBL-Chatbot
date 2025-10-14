@@ -120,5 +120,87 @@ def health():
         click.echo("✅ 애플리케이션 상태: 정상")
 
 
+@cli.command('init-admin')
+@click.option('--student-id', help='관리자 학번 (환경 변수 ADMIN_STUDENT_ID 또는 기본값 사용)')
+@click.option('--name', help='관리자 이름 (환경 변수 ADMIN_NAME 또는 기본값 사용)')
+@click.option('--password', help='관리자 비밀번호 (환경 변수 ADMIN_PASSWORD 또는 기본값 사용)')
+def init_admin(student_id, name, password):
+    """
+    초기 Super 관리자 계정 생성
+    
+    이 명령은 Super 관리자가 없을 때만 작동합니다.
+    환경 변수 또는 명령줄 옵션으로 계정 정보를 제공할 수 있습니다.
+    
+    환경 변수:
+        ADMIN_STUDENT_ID - 관리자 학번
+        ADMIN_NAME - 관리자 이름
+        ADMIN_PASSWORD - 관리자 비밀번호
+    
+    사용 예시:
+        flask init-admin
+        flask init-admin --student-id 2024000001 --name "관리자" --password "SecurePass123!"
+    """
+    app = create_app()
+    
+    with app.app_context():
+        from app.models.user import User
+        from app import bcrypt
+        
+        # Super 관리자가 이미 존재하는지 확인
+        existing_super = User.query.filter_by(role='super').first()
+        
+        if existing_super:
+            click.echo(f"✓ Super 관리자가 이미 존재합니다: {existing_super.student_id} ({existing_super.name})")
+            click.echo("Super 관리자는 시스템에 하나만 존재할 수 있습니다.")
+            sys.exit(0)
+        
+        # 관리자 정보 결정 (우선순위: CLI 옵션 > 환경 변수 > 기본값)
+        admin_student_id = student_id or os.getenv('ADMIN_STUDENT_ID', 'super')
+        admin_name = name or os.getenv('ADMIN_NAME', 'Super Administrator')
+        admin_password = password or os.getenv('ADMIN_PASSWORD', 'super1234')
+        
+        # 보안 경고
+        if admin_password == 'super1234':
+            click.echo("")
+            click.echo("=" * 60)
+            click.echo("⚠️  경고: 기본 비밀번호를 사용하고 있습니다!")
+            click.echo("⚠️  프로덕션 환경에서는 반드시 강력한 비밀번호를 설정하세요!")
+            click.echo("=" * 60)
+            click.echo("")
+        
+        click.echo(f"Super 관리자 계정을 생성합니다: {admin_student_id}")
+        
+        # 비밀번호 해시 생성
+        password_hash = bcrypt.generate_password_hash(admin_password).decode('utf-8')
+        
+        # Super 관리자 생성
+        admin = User(
+            student_id=admin_student_id,
+            password_hash=password_hash,
+            name=admin_name,
+            role='super',
+            is_active=True
+        )
+        
+        db.session.add(admin)
+        db.session.commit()
+        
+        click.echo("")
+        click.echo("=" * 60)
+        click.echo("✅ Super 관리자가 생성되었습니다!")
+        click.echo("=" * 60)
+        click.echo(f"학번: {admin.student_id}")
+        click.echo(f"이름: {admin.name}")
+        click.echo(f"역할: Super Administrator")
+        click.echo("=" * 60)
+        click.echo("")
+        click.echo("📝 주의사항:")
+        click.echo("  • 이 계정의 권한은 절대 변경할 수 없습니다.")
+        click.echo("  • 이 계정은 비활성화할 수 없습니다.")
+        click.echo("  • 비밀번호는 본인만 변경 가능합니다.")
+        click.echo("")
+        sys.exit(0)
+
+
 if __name__ == '__main__':
     cli()

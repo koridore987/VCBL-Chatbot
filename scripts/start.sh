@@ -17,67 +17,67 @@ fi
 echo "Starting Nginx..."
 nginx
 
-# 데이터베이스 마이그레이션 실행
-echo "Running database migrations..."
+# 데이터베이스 연결 확인
+echo "Checking database connection..."
 cd /app/backend
 export FLASK_APP=run.py
 
-if ! flask db upgrade; then
-    echo "ERROR: Database migration failed!" >&2
-    exit 1
-fi
-echo "✓ Database migrations completed."
-
-# 초기 관리자 계정 생성 (존재하지 않을 경우에만)
-echo "Checking for initial admin account..."
-python << 'PYTHON_SCRIPT'
-from app import create_app, db, bcrypt
-from app.models.user import User
+# 데이터베이스 연결 테스트
+if ! python << 'PYTHON_SCRIPT'
+from app import create_app, db
 import sys
 
 app = create_app()
 
 with app.app_context():
-    # Super 관리자가 이미 존재하는지 확인
+    try:
+        # 간단한 쿼리로 연결 테스트
+        db.session.execute('SELECT 1')
+        print("✓ 데이터베이스 연결: 성공")
+    except Exception as e:
+        print(f"✗ 데이터베이스 연결 실패: {e}", file=sys.stderr)
+        sys.exit(1)
+PYTHON_SCRIPT
+then
+    echo "ERROR: Database connection failed!" >&2
+    exit 1
+fi
+
+# 데이터베이스 마이그레이션 상태 확인 (실행하지 않음)
+echo "Checking database migration status..."
+if flask db current > /dev/null 2>&1; then
+    echo "✓ Database schema is ready."
+else
+    echo "⚠️  Warning: Database migrations may not be applied."
+    echo "⚠️  Please run migrations using Cloud Run Job or manually."
+    echo "⚠️  Command: gcloud run jobs execute vcbl-migrate --region=your-region --wait"
+fi
+
+# Super 관리자 존재 확인 (생성하지 않음)
+echo "Checking for super admin account..."
+python << 'PYTHON_SCRIPT'
+from app import create_app
+from app.models.user import User
+
+app = create_app()
+
+with app.app_context():
     existing_super = User.query.filter_by(role='super').first()
     
     if existing_super:
-        print(f"✓ Super 관리자가 이미 존재합니다: {existing_super.student_id} ({existing_super.name})")
+        print(f"✓ Super 관리자가 존재합니다: {existing_super.student_id} ({existing_super.name})")
     else:
-        # 환경 변수에서 관리자 정보 가져오기 (없으면 기본값 사용)
-        import os
-        admin_student_id = os.getenv('ADMIN_STUDENT_ID', '9999000001')
-        admin_name = os.getenv('ADMIN_NAME', 'Super Administrator')
-        admin_password = os.getenv('ADMIN_PASSWORD', 'super1234')
-        
-        print(f"Creating initial super admin account: {admin_student_id}")
-        
-        # 비밀번호 해시 생성
-        password_hash = bcrypt.generate_password_hash(admin_password).decode('utf-8')
-        
-        # Super 관리자 생성
-        admin = User(
-            student_id=admin_student_id,
-            password_hash=password_hash,
-            name=admin_name,
-            role='super',
-            is_active=True
-        )
-        
-        db.session.add(admin)
-        db.session.commit()
-        
-        print("=" * 50)
-        print("✅ Super 관리자가 생성되었습니다!")
-        print("=" * 50)
-        print(f"학번: {admin.student_id}")
-        print(f"이름: {admin.name}")
-        print(f"비밀번호: {admin_password}")
-        print("=" * 50)
-        print("⚠️  보안 경고: 프로덕션 환경에서는 반드시 비밀번호를 변경하세요!")
-        print("=" * 50)
-
+        print("⚠️  Warning: No super admin account found.")
+        print("⚠️  Please create one using Cloud Run Job or manually.")
+        print("⚠️  Command: gcloud run jobs execute vcbl-init-admin --region=your-region --wait")
+        print("⚠️  Or use CLI: flask init-admin")
 PYTHON_SCRIPT
+
+echo ""
+echo "=" * 50
+echo "✅ Application startup checks completed."
+echo "=" * 50
+echo ""
 
 # Gunicorn으로 Flask 애플리케이션 시작
 echo "Starting Gunicorn..."

@@ -9,25 +9,36 @@ from datetime import timedelta
 def get_database_url():
     """
     데이터베이스 URL을 반환합니다.
-    Cloud SQL Unix 소켓 연결을 지원합니다.
+    
+    우선순위:
+    1. DATABASE_URL 환경 변수 (명시적 설정)
+    2. CLOUD_SQL_INSTANCE (Cloud Run/GCP 환경)
+    3. SQLite (로컬 개발 환경 - Docker Compose PostgreSQL 권장)
     """
-    # DATABASE_URL이 명시적으로 설정된 경우 사용
+    # 1. DATABASE_URL이 명시적으로 설정된 경우 사용
     database_url = os.getenv('DATABASE_URL')
     if database_url:
         return database_url
     
-    # Cloud SQL 인스턴스 연결 (Unix 소켓 사용)
+    # 2. Cloud SQL 인스턴스 연결 (Unix 소켓 사용)
     instance_connection_name = os.getenv('CLOUD_SQL_INSTANCE')
     if instance_connection_name:
         db_user = os.getenv('DB_USER', 'vcbl_user')
         db_password = os.getenv('DB_PASSWORD')
         db_name = os.getenv('DB_NAME', 'vcbl_chatbot')
         
+        if not db_password:
+            raise ValueError(
+                "DB_PASSWORD 환경 변수가 설정되지 않았습니다. "
+                "Cloud SQL 연결에 필수입니다."
+            )
+        
         # Cloud Run에서는 Unix 소켓을 통해 Cloud SQL에 연결
         # 형식: postgresql+psycopg2://USER:PASSWORD@/DATABASE?host=/cloudsql/INSTANCE_CONNECTION_NAME
         return f"postgresql+psycopg2://{db_user}:{db_password}@/{db_name}?host=/cloudsql/{instance_connection_name}"
     
-    # 기본값: SQLite (개발 환경)
+    # 3. 기본값: SQLite (로컬 개발 환경)
+    # 주의: 프로덕션 환경과의 일관성을 위해 Docker Compose PostgreSQL 사용 권장
     return 'sqlite:///vcbl_chatbot.db'
 
 
