@@ -8,8 +8,9 @@ import sys
 from flask import Flask
 from flask_migrate import Migrate, upgrade, downgrade, current, history
 from sqlalchemy import text
-from app import create_app
-from app.models import db
+from app import create_app, db
+import secrets
+import string
 
 
 @click.group()
@@ -156,19 +157,31 @@ def init_admin(student_id, name, password):
             sys.exit(0)
         
         # 관리자 정보 결정 (우선순위: CLI 옵션 > 환경 변수 > 기본값)
-        admin_student_id = student_id or os.getenv('ADMIN_STUDENT_ID', 'super')
+        # 학번: 10자리 정수, 관리자 규칙상 9999로 시작
+        raw_student_id = student_id or os.getenv('ADMIN_STUDENT_ID') or '9999000001'
+        try:
+            admin_student_id = int(raw_student_id)
+        except ValueError:
+            click.echo("❌ 관리자 학번은 10자리 정수여야 합니다.")
+            sys.exit(1)
+        if len(str(admin_student_id)) != 10 or not str(admin_student_id).startswith('9999'):
+            click.echo("❌ 관리자 학번은 10자리이며 9999로 시작해야 합니다 (예: 9999000001).")
+            sys.exit(1)
+
         admin_name = name or os.getenv('ADMIN_NAME', 'Super Administrator')
-        admin_password = password or os.getenv('ADMIN_PASSWORD', 'super1234')
-        
-        # 보안 경고
-        if admin_password == 'super1234':
-            click.echo("")
-            click.echo("=" * 60)
-            click.echo("⚠️  경고: 기본 비밀번호를 사용하고 있습니다!")
-            click.echo("⚠️  프로덕션 환경에서는 반드시 강력한 비밀번호를 설정하세요!")
-            click.echo("=" * 60)
-            click.echo("")
-        
+
+        # 비밀번호: 미제공 시 강력한 임시 비밀번호 생성
+        env_password = os.getenv('ADMIN_PASSWORD')
+        generated_temp_password = False
+        if password:
+            admin_password = password
+        elif env_password:
+            admin_password = env_password
+        else:
+            alphabet = string.ascii_letters + string.digits + "!@#$%^&*()-_=+[]{}"  # 안전한 특수문자 집합
+            admin_password = ''.join(secrets.choice(alphabet) for _ in range(16))
+            generated_temp_password = True
+
         click.echo(f"Super 관리자 계정을 생성합니다: {admin_student_id}")
         
         # 비밀번호 해시 생성
@@ -193,6 +206,10 @@ def init_admin(student_id, name, password):
         click.echo(f"학번: {admin.student_id}")
         click.echo(f"이름: {admin.name}")
         click.echo(f"역할: Super Administrator")
+        if generated_temp_password:
+            click.echo("- 임시 비밀번호: " + admin_password)
+            click.echo("")
+            click.echo("⚠️  보안 안내: 로그인 후 즉시 비밀번호를 변경하세요.")
         click.echo("=" * 60)
         click.echo("")
         click.echo("📝 주의사항:")
