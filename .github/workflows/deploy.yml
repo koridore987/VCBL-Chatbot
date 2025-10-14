@@ -8,6 +8,8 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: asia-northeast3
   SERVICE_NAME: vcbl-chatbot
+  ARTIFACT_HOST: asia-northeast3-docker.pkg.dev
+  ARTIFACT_REPO: vcbl-chatbot
 
 jobs:
   deploy:
@@ -36,18 +38,29 @@ jobs:
     - name: Configure Docker to use gcloud as a credential helper
       run: |
         gcloud auth configure-docker gcr.io --quiet
+        gcloud auth configure-docker $ARTIFACT_HOST --quiet
 
-    - name: Build and push Docker image
+    - name: Ensure Artifact Registry repository exists
       run: |
-        docker build -t gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA .
-        docker push gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA
+        gcloud artifacts repositories create "$ARTIFACT_REPO" \
+          --repository-format=docker \
+          --location="$REGION" \
+          --description="VCBL Chatbot images" \
+          || echo "Repository may already exist. Continuing."
+
+    - name: Build and push Docker image (Artifact Registry)
+      run: |
+        IMAGE_URI=$ARTIFACT_HOST/$PROJECT_ID/$ARTIFACT_REPO/$SERVICE_NAME:$GITHUB_SHA
+        echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+        docker build -t $IMAGE_URI .
+        docker push $IMAGE_URI
 
     - name: Run database migrations
       if: github.ref == 'refs/heads/main'
       run: |
         # 마이그레이션을 위한 임시 Cloud Run Job 생성 및 실행
         gcloud run jobs create vcbl-migrate-$GITHUB_SHA \
-          --image gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
+          --image $IMAGE_URI \
           --region $REGION \
           --set-env-vars FLASK_ENV=production,CLOUD_SQL_INSTANCE=$PROJECT_ID:asia-northeast3:vcbl-chatbot-db,DB_USER=vcbl_user,DB_NAME=vcbl_chatbot \
           --set-cloudsql-instances $PROJECT_ID:asia-northeast3:vcbl-chatbot-db \
@@ -68,7 +81,7 @@ jobs:
       if: github.ref == 'refs/heads/main'
       run: |
         gcloud run deploy $SERVICE_NAME \
-          --image gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
+          --image $IMAGE_URI \
           --platform managed \
           --region $REGION \
           --allow-unauthenticated \
