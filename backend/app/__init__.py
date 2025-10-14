@@ -95,5 +95,10 @@ def create_app(config_name=None):
     def health_check():
         return {'status': 'healthy'}, 200
     
+    # API 헬스 체크 (업스트림 확인용)
+    @app.route('/api/health')
+    def api_health_check():
+        return {'status': 'ok'}, 200
+    
     return app
 
