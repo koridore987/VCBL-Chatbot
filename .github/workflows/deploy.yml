@@ -8,8 +8,6 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: asia-northeast3
   SERVICE_NAME: vcbl-chatbot
-  ARTIFACT_HOST: asia-northeast3-docker.pkg.dev
-  ARTIFACT_REPO: vcbl-chatbot
 
 jobs:
   deploy:
@@ -38,19 +36,10 @@ jobs:
     - name: Configure Docker to use gcloud as a credential helper
       run: |
         gcloud auth configure-docker gcr.io --quiet
-        gcloud auth configure-docker $ARTIFACT_HOST --quiet
 
-    - name: Ensure Artifact Registry repository exists
+    - name: Build and push Docker image (Container Registry)
       run: |
-        gcloud artifacts repositories create "$ARTIFACT_REPO" \
-          --repository-format=docker \
-          --location="$REGION" \
-          --description="VCBL Chatbot images" \
-          || echo "Repository may already exist. Continuing."
-
-    - name: Build and push Docker image (Artifact Registry)
-      run: |
-        IMAGE_URI=$ARTIFACT_HOST/$PROJECT_ID/$ARTIFACT_REPO/$SERVICE_NAME:$GITHUB_SHA
+        IMAGE_URI=gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA
         echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
         docker build -t $IMAGE_URI .
         docker push $IMAGE_URI
