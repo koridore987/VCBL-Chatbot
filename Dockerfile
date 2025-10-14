@@ -1,67 +1,45 @@
-# Full-stack Dockerfile (PostgreSQL + Google Cloud Run 최적화)
+# Backend-focused Dockerfile (Gunicorn-only for Cloud Run)
 FROM python:3.11-slim AS backend-builder
 
-WORKDIR /backend
+WORKDIR /app
 
-# 시스템 의존성 설치 (PostgreSQL 클라이언트 라이브러리 포함)
+# 시스템 의존성 설치 (컴파일 및 PostgreSQL 클라이언트 헤더)
 RUN apt-get update && apt-get install -y \
-    gcc \
+    build-essential \
     libpq-dev \
-    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# 백엔드 의존성 설치 (캐시 최적화)
+# Python 의존성 설치
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# 백엔드 코드 복사
-COPY backend/ .
+# 애플리케이션 코드 복사
+COPY backend ./backend
 
-# 프론트엔드 빌드 단계
-FROM node:18-alpine AS frontend-builder
-
-WORKDIR /frontend
-
-# 의존성 설치 (캐시 최적화)
-COPY frontend/package*.json ./
-RUN npm ci
-
-# 소스 코드 복사 및 빌드
-COPY frontend/ .
-RUN npm run build
-
-# 최종 프로덕션 단계
+# 최종 이미지는 런타임 의존성만 포함
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# 런타임 의존성 설치 (PostgreSQL 클라이언트 라이브러리 포함)
+# 런타임에 필요한 라이브러리만 설치
 RUN apt-get update && apt-get install -y \
-    nginx \
     libpq5 \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    && rm -rf /var/lib/apt/lists/*
 
-# 백엔드 복사 (Python 패키지 및 실행 파일)
+# Python 패키지와 실행 파일 복사
 COPY --from=backend-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=backend-builder /usr/local/bin /usr/local/bin
-COPY --from=backend-builder /backend /app/backend
 
-# 프론트엔드 빌드 복사
-COPY --from=frontend-builder /frontend/dist /app/frontend/dist
-
-# nginx 설정 복사
-COPY config/nginx-full.conf /etc/nginx/sites-available/default
-
-# 포트 설정
-ENV PORT=8080
-EXPOSE 8080
+# 애플리케이션 코드 복사
+COPY --from=backend-builder /app/backend /app/backend
 
 # 시작 스크립트 복사
 COPY scripts/start.sh /start.sh
 RUN chmod +x /start.sh
 
-CMD ["/start.sh"]
+# Cloud Run 포트 (Gunicorn이 직접 바인딩)
+ENV PORT=8080
+EXPOSE 8080
 
+CMD ["/start.sh"]

@@ -12,19 +12,9 @@ else
     export CLOUD_RUN=false
 fi
 
-# Nginx 설정 및 시작 (로컬/Cloud Run 공통)
-echo "Configuring Nginx..."
-# PORT 환경 변수가 없으면 기본값 8080 사용 (Nginx 수신 포트)
+# Gunicorn 바인딩 포트 설정 (Cloud Run은 $PORT 제공)
 export PORT=${PORT:-8080}
-
-# Nginx 설정 파일에서 포트 치환
-if [ -f /etc/nginx/sites-available/default ]; then
-    sed -i "s/listen 8080/listen $PORT/g" /etc/nginx/sites-available/default
-fi
-
-# Nginx 시작
-echo "Starting Nginx..."
-nginx
+echo "Gunicorn will bind to 0.0.0.0:${PORT}"
 
 # 데이터베이스 연결 확인
 echo "Checking database connection..."
@@ -89,46 +79,34 @@ with app.app_context():
 PYTHON_SCRIPT
 
 echo ""
-echo "=" * 50
+printf '%0.s=' {1..50}; echo
 echo "✅ Application startup checks completed."
-echo "=" * 50
+printf '%0.s=' {1..50}; echo
 echo ""
 
 # Gunicorn으로 Flask 애플리케이션 시작
 echo "Starting Gunicorn..."
 
-# Cloud Run 환경에 따른 설정
+# Cloud Run은 단일 프로세스가 권장되므로 워커 수 최소화
 if [ "$CLOUD_RUN" = "true" ]; then
-    # Cloud Run: Nginx(수신 8080) → Gunicorn(내부 5000)
-    echo "🚀 Cloud Run configuration: Nginx on $PORT proxying to Gunicorn :5000"
-    exec gunicorn \
-        --bind 0.0.0.0:5000 \
-        --workers 1 \
-        --threads 8 \
-        --worker-class gthread \
-        --worker-tmp-dir /dev/shm \
-        --timeout 300 \
-        --keep-alive 5 \
-        --log-level info \
-        --access-logfile - \
-        --error-logfile - \
-        run:app
+    WORKERS=${WORKERS:-1}
+    THREADS=${THREADS:-8}
 else
-    # 로컬 환경: 다중 워커
-    echo "🏠 Local configuration: Multiple workers"
     WORKERS=${WORKERS:-$(( $(nproc) * 2 + 1 ))}
-    echo "Starting with $WORKERS workers"
-    
-    exec gunicorn \
-        --bind 0.0.0.0:5000 \
-        --workers $WORKERS \
-        --threads 4 \
-        --worker-class gthread \
-        --worker-tmp-dir /dev/shm \
-        --timeout 300 \
-        --keep-alive 5 \
-        --log-level info \
-        --access-logfile - \
-        --error-logfile - \
-        run:app
+    THREADS=${THREADS:-4}
 fi
+
+echo "Using $WORKERS workers and $THREADS threads"
+
+exec gunicorn \
+    --bind "0.0.0.0:${PORT}" \
+    --workers "$WORKERS" \
+    --threads "$THREADS" \
+    --worker-class gthread \
+    --worker-tmp-dir /dev/shm \
+    --timeout 300 \
+    --keep-alive 5 \
+    --log-level info \
+    --access-logfile - \
+    --error-logfile - \
+    run:app

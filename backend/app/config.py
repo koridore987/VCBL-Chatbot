@@ -6,6 +6,24 @@ import os
 from datetime import timedelta
 
 
+def get_ratelimit_storage_url(require_distributed: bool = False) -> str:
+    """
+    Rate limiting 스토리지 백엔드를 반환합니다.
+
+    Cloud Run과 같은 분산 환경에서는 인메모리 스토리지를 사용할 수 없으므로
+    production 환경에서는 외부 Redis(또는 호환 서비스)를 강제합니다.
+    """
+    url = os.getenv('RATELIMIT_STORAGE_URL') or os.getenv('REDIS_URL') or 'memory://'
+
+    if require_distributed and url.startswith('memory://'):
+        raise ValueError(
+            "Production 환경에서는 분산 Rate Limiting을 위해 RATELIMIT_STORAGE_URL "
+            "또는 REDIS_URL 환경 변수를 Redis와 같은 외부 저장소로 설정해야 합니다."
+        )
+
+    return url
+
+
 def get_database_url():
     """
     데이터베이스 URL을 반환합니다.
@@ -90,7 +108,7 @@ class Config:
     DAILY_TOKEN_LIMIT = int(os.getenv('DAILY_TOKEN_LIMIT', 50000))
     
     # Rate Limiting
-    RATELIMIT_STORAGE_URL = os.getenv('REDIS_URL', 'memory://')
+    RATELIMIT_STORAGE_URL = get_ratelimit_storage_url()
     RATELIMIT_STRATEGY = 'fixed-window'
     RATELIMIT_DEFAULT = '100 per minute'
     
@@ -118,6 +136,7 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     RATELIMIT_ENABLED = True
+    RATELIMIT_STORAGE_URL = get_ratelimit_storage_url(require_distributed=True)
     
     # 프로덕션에서는 HTTPS만 허용
     SESSION_COOKIE_SECURE = True
@@ -151,4 +170,3 @@ def get_config(config_name=None):
     if config_name is None:
         config_name = os.getenv('FLASK_ENV', 'development')
     return config_by_name.get(config_name, DevelopmentConfig)
-

@@ -3,15 +3,17 @@ name: Deploy to Google Cloud Run (manual only)
 on:
   workflow_dispatch: {}
 
-env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  REGION: asia-northeast3
-  SERVICE_NAME: vcbl-chatbot
-
 jobs:
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      REGION: asia-northeast3
+      SERVICE_NAME: vcbl-chatbot
+      CORS_ORIGINS: ${{ vars.CORS_ORIGINS }}
+      REDIS_SECRET_NAME: ${{ vars.REDIS_SECRET_NAME }}
     
     permissions:
       contents: read
@@ -46,13 +48,14 @@ jobs:
     - name: Run database migrations
       if: github.ref == 'refs/heads/main'
       run: |
+        : "${REDIS_SECRET_NAME:=vcbl-redis-url}"
         # 마이그레이션을 위한 임시 Cloud Run Job 생성 및 실행
         gcloud run jobs create vcbl-migrate-$GITHUB_SHA \
           --image $IMAGE_URI \
           --region $REGION \
           --set-env-vars FLASK_ENV=production,CLOUD_SQL_INSTANCE=$PROJECT_ID:asia-northeast3:vcbl-chatbot-db,DB_USER=vcbl_user,DB_NAME=vcbl_chatbot \
           --set-cloudsql-instances $PROJECT_ID:asia-northeast3:vcbl-chatbot-db \
-          --set-secrets DB_PASSWORD=vcbl-db-password:latest,OPENAI_API_KEY=vcbl-openai-key:latest,SECRET_KEY=vcbl-secret-key:latest,JWT_SECRET_KEY=vcbl-jwt-secret:latest \
+          --set-secrets DB_PASSWORD=vcbl-db-password:latest,OPENAI_API_KEY=vcbl-openai-key:latest,SECRET_KEY=vcbl-secret-key:latest,JWT_SECRET_KEY=vcbl-jwt-secret:latest,REDIS_URL=${REDIS_SECRET_NAME}:latest \
           --command flask \
           --args db,upgrade \
           --max-retries 3 \
@@ -68,6 +71,8 @@ jobs:
     - name: Deploy to Cloud Run
       if: github.ref == 'refs/heads/main'
       run: |
+        : "${CORS_ORIGINS:=https://vcbl-chatbot-439778352765.asia-northeast3.run.app}"
+        : "${REDIS_SECRET_NAME:=vcbl-redis-url}"
         gcloud run deploy $SERVICE_NAME \
           --image $IMAGE_URI \
           --platform managed \
@@ -80,9 +85,9 @@ jobs:
           --min-instances 1 \
           --timeout 300 \
           --concurrency 80 \
-          --set-env-vars FLASK_ENV=production,CLOUD_SQL_INSTANCE=$PROJECT_ID:asia-northeast3:vcbl-chatbot-db,DB_USER=vcbl_user,DB_NAME=vcbl_chatbot,CORS_ORIGINS=https://vcbl-chatbot-439778352765.asia-northeast3.run.app \
+          --set-env-vars FLASK_ENV=production,CLOUD_SQL_INSTANCE=$PROJECT_ID:asia-northeast3:vcbl-chatbot-db,DB_USER=vcbl_user,DB_NAME=vcbl_chatbot,CORS_ORIGINS=$CORS_ORIGINS \
           --set-cloudsql-instances $PROJECT_ID:asia-northeast3:vcbl-chatbot-db \
-          --set-secrets DB_PASSWORD=vcbl-db-password:latest,OPENAI_API_KEY=vcbl-openai-key:latest,SECRET_KEY=vcbl-secret-key:latest,JWT_SECRET_KEY=vcbl-jwt-secret:latest
+          --set-secrets DB_PASSWORD=vcbl-db-password:latest,OPENAI_API_KEY=vcbl-openai-key:latest,SECRET_KEY=vcbl-secret-key:latest,JWT_SECRET_KEY=vcbl-jwt-secret:latest,REDIS_URL=${REDIS_SECRET_NAME}:latest
 
     - name: Show service URL
       if: github.ref == 'refs/heads/main'
