@@ -23,6 +23,7 @@ class User(db.Model):
     chat_sessions = db.relationship('ChatSession', backref='user', lazy=True, cascade='all, delete-orphan')
     event_logs = db.relationship('EventLog', backref='user', lazy=True, cascade='all, delete-orphan')
     scaffolding_responses = db.relationship('ScaffoldingResponse', backref='user', lazy=True, cascade='all, delete-orphan')
+    learning_progress_entries = db.relationship('LearningProgress', backref='user', lazy=True, cascade='all, delete-orphan')
     survey_responses = db.relationship('SurveyResponse', back_populates='user', lazy=True, cascade='all, delete-orphan')
     
     def to_dict(self):
@@ -37,4 +38,3 @@ class User(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
-

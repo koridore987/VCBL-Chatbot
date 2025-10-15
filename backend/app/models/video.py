@@ -27,6 +27,7 @@ class Video(db.Model):
     scaffoldings = db.relationship('Scaffolding', backref='video', lazy=True, cascade='all, delete-orphan')
     chat_sessions = db.relationship('ChatSession', backref='video', lazy=True, cascade='all, delete-orphan')
     event_logs = db.relationship('EventLog', backref='video', lazy=True, cascade='all, delete-orphan')
+    learning_progress_entries = db.relationship('LearningProgress', backref='video', lazy=True, cascade='all, delete-orphan')
     
     def to_dict(self):
         return {
@@ -46,4 +47,3 @@ class Video(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
-
