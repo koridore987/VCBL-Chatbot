@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import api from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 import { API_ENDPOINTS } from '../constants'
-import { storage } from '../utils'
+import { formatters } from '../utils'
 import { HiBookmark, HiExclamationCircle } from 'react-icons/hi'
 import VideoCard from '../components/VideoCard'
 import HeroSection from '../components/HeroSection'
@@ -38,14 +38,72 @@ const VideoList = () => {
 
   // Filter and search videos
   const filteredVideos = useMemo(() => {
-    return videos.filter(video => {
+    const statusRank = {
+      in_progress: 0,
+      not_started: 1,
+      completed: 2
+    }
+
+    const filtered = videos.filter(video => {
       // Search filter
       const matchesSearch = video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (video.description && video.description.toLowerCase().includes(searchTerm.toLowerCase()))
       
       return matchesSearch
     })
+    
+    return filtered.slice().sort((a, b) => {
+      const statusA = a.learning_progress?.status || 'not_started'
+      const statusB = b.learning_progress?.status || 'not_started'
+      if (statusRank[statusA] !== statusRank[statusB]) {
+        return (statusRank[statusA] ?? 1) - (statusRank[statusB] ?? 1)
+      }
+      const orderA = a.order_index ?? 0
+      const orderB = b.order_index ?? 0
+      return orderA - orderB
+    })
   }, [videos, searchTerm])
+
+  const progressOverview = useMemo(() => {
+    if (!videos.length) return null
+
+    const counts = {
+      completed: 0,
+      in_progress: 0,
+      not_started: 0
+    }
+    let latestTimestamp = null
+    let latestVideoTitle = ''
+
+    videos.forEach((video) => {
+      const status = video.learning_progress?.status || 'not_started'
+      if (counts[status] === undefined) {
+        counts[status] = 0
+      }
+      counts[status] += 1
+
+      const activityTimestamp = video.learning_progress?.completed_at
+        || video.learning_progress?.last_activity_at
+        || video.learning_progress?.started_at
+
+      if (activityTimestamp) {
+        const activityDate = new Date(activityTimestamp)
+        if (!latestTimestamp || activityDate > new Date(latestTimestamp)) {
+          latestTimestamp = activityTimestamp
+          latestVideoTitle = video.title
+        }
+      }
+    })
+
+    const totalTracked = Object.values(counts).reduce((sum, value) => sum + value, 0)
+
+    return {
+      counts,
+      latestTimestamp,
+      latestVideoTitle,
+      totalTracked
+    }
+  }, [videos])
 
   // Stats는 더 이상 필요하지 않음
   const stats = null
@@ -66,6 +124,44 @@ const VideoList = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
         <HeroSection stats={stats} />
+        
+        {progressOverview && (
+          <div className="glass-card mb-8 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">나의 학습 현황</h2>
+              <span className="text-xs text-gray-500">
+                총 학습 중 콘텐츠: {progressOverview.totalTracked}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="rounded-xl bg-emerald-50 px-4 py-3">
+                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">완료</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">
+                  {progressOverview.counts.completed}
+                </p>
+              </div>
+              <div className="rounded-xl bg-blue-50 px-4 py-3">
+                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">진행 중</p>
+                <p className="text-2xl font-bold text-blue-600 mt-1">
+                  {progressOverview.counts.in_progress}
+                </p>
+              </div>
+              <div className="rounded-xl bg-gray-50 px-4 py-3">
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">미시작</p>
+                <p className="text-2xl font-bold text-gray-700 mt-1">
+                  {progressOverview.counts.not_started}
+                </p>
+              </div>
+            </div>
+            {progressOverview.latestTimestamp && (
+              <p className="text-xs text-gray-500 mt-4">
+                최근 학습: <span className="font-medium text-gray-700">{progressOverview.latestVideoTitle}</span>
+                {' · '}
+                {formatters.formatRelativeTime(progressOverview.latestTimestamp)}
+              </p>
+            )}
+          </div>
+        )}
         
         {/* Error Alert */}
         {error && (

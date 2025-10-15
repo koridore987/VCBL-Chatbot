@@ -1,7 +1,30 @@
 import { HiPlay } from 'react-icons/hi'
 import { Link } from 'react-router-dom'
+import { formatters } from '../utils'
 
 const VideoCard = ({ video }) => {
+  const progress = video.learning_progress || {}
+  const status = progress.status || 'not_started'
+  const activityTimestamp = progress.completed_at || progress.last_activity_at || progress.started_at
+
+  const statusMeta = {
+    completed: {
+      label: '완료',
+      className: 'bg-emerald-100 text-emerald-700'
+    },
+    in_progress: {
+      label: '진행 중',
+      className: 'bg-blue-100 text-blue-700'
+    },
+    not_started: {
+      label: '미시작',
+      className: 'bg-gray-100 text-gray-600'
+    }
+  }[status] || {
+    label: '미시작',
+    className: 'bg-gray-100 text-gray-600'
+  }
+
   return (
     <Link
       to={`/videos/${video.id}`}
@@ -48,10 +71,27 @@ const VideoCard = ({ video }) => {
             </p>
           )}
         </div>
+        
+        <div className="px-6 pb-6 pt-0">
+          <div className="border-t border-gray-100 pt-4 mt-2 flex items-center justify-between text-xs text-gray-500">
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full font-semibold ${statusMeta.className}`}>
+              {statusMeta.label}
+            </span>
+            <span className="text-right">
+              {activityTimestamp
+                ? `${status === 'completed' ? '완료' : '최근 학습'} · ${formatters.formatRelativeTime(activityTimestamp)}`
+                : '학습 기록 없음'}
+            </span>
+          </div>
+          {status === 'completed' && progress.completed_at && (
+            <p className="text-[11px] text-gray-400 mt-1 text-right">
+              완료일: {formatters.formatDate(progress.completed_at)}
+            </p>
+          )}
+        </div>
       </div>
     </Link>
   )
 }
 
 export default VideoCard
-
