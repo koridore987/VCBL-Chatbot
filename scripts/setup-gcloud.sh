@@ -162,6 +162,6 @@ echo "1. cloudbuild.yaml 파일에서 _CLOUD_SQL_INSTANCE 값을 다음으로 �
 echo "   ${PROJECT_ID}:${REGION}:${DB_INSTANCE_NAME}"
 echo ""
 echo "2. 배포 실행:"
-echo "   ./scripts/deploy.sh"
+echo "   ./scripts/deploy-unified.sh --quick"
 echo ""
 

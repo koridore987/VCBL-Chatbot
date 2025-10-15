@@ -44,7 +44,7 @@ services:
       - "8080:8080"
     environment:
       # PostgreSQL 연결 (docker-compose 네트워크)
-      DATABASE_URL: postgresql://vcbl_user:${DB_PASSWORD:-vcbl_dev_password}@db:5432/vcbl_chatbot
+      DATABASE_URL: postgresql+psycopg://vcbl_user:${DB_PASSWORD:-vcbl_dev_password}@db:5432/vcbl_chatbot
       
       # Redis 연결 (선택사항)
       REDIS_URL: redis://redis:6379/0
@@ -65,42 +65,20 @@ services:
       PORT: 8080
       FLASK_ENV: ${FLASK_ENV:-development}
       FLASK_APP: run.py
+      INIT_ADMIN_ON_START: ${INIT_ADMIN_ON_START:-true}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
       
       # CORS 설정
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
-      
-      # 초기 관리자 계정 설정 (자동 생성됨)
-      ADMIN_STUDENT_ID: ${ADMIN_STUDENT_ID:-9999000001}
-      ADMIN_NAME: ${ADMIN_NAME:-Super Administrator}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-super1234}
     
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # 초기화 스크립트 실행
-    command: >
-      sh -c "
-        echo 'Waiting for database to be ready...' &&
-        sleep 5 &&
-        echo 'Current directory:' &&
-        pwd &&
-        echo 'Files in current directory:' &&
-        ls -la &&
-        echo 'Running database migrations...' &&
-        cd /app/backend &&
-        export FLASK_APP=run.py &&
-        python -m flask db upgrade &&
-        echo 'Creating super admin account...' &&
-        python -m flask init-admin &&
-        echo 'Starting application...' &&
-        gunicorn --bind 0.0.0.0:8080 --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile - run:app
-      "
 
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
-
