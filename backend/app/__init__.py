@@ -100,5 +100,11 @@ def create_app(config_name=None):
     def api_health_check():
         return {'status': 'ok'}, 200
     
+    # CLI 명령어 등록
+    from app.cli import cli as cli_group
+    app.cli.add_command(cli_group)
+    init_admin_cmd = cli_group.get_command(app, 'init-admin')
+    if init_admin_cmd is not None:
+        app.cli.add_command(init_admin_cmd, name='init-admin')
+    
     return app
-

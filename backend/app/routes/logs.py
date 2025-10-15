@@ -21,7 +21,7 @@ logs_bp = Blueprint('logs', __name__)
 
 @logs_bp.route('/events', methods=['GET'])
 @admin_required
-def get_event_logs():
+def get_event_logs(current_user):
     """이벤트 로그 조회 (페이지네이션)"""
     try:
         page = request.args.get('page', 1, type=int)
@@ -59,7 +59,7 @@ def get_event_logs():
 
 @logs_bp.route('/events/export', methods=['GET'])
 @admin_required
-def export_event_logs():
+def export_event_logs(current_user):
     """이벤트 로그 CSV 내보내기"""
     try:
         event_type = request.args.get('event_type')
@@ -121,7 +121,7 @@ def export_event_logs():
 
 @logs_bp.route('/chat-messages', methods=['GET'])
 @admin_required
-def get_chat_messages():
+def get_chat_messages(current_user):
     """채팅 메시지 로그 조회 (페이지네이션)"""
     try:
         page = request.args.get('page', 1, type=int)
@@ -169,7 +169,7 @@ def get_chat_messages():
 
 @logs_bp.route('/timeline', methods=['GET'])
 @admin_required
-def get_activity_timeline():
+def get_admin_timeline(current_user):
     """채팅 세션과 비디오 이벤트를 통합한 타임라인 조회"""
     try:
         page = request.args.get('page', 1, type=int)
@@ -232,7 +232,7 @@ def get_activity_timeline():
 
 @logs_bp.route('/chat-sessions-grouped', methods=['GET'])
 @admin_required
-def get_chat_sessions_grouped():
+def get_chat_sessions_grouped(current_user):
     """채팅 세션별로 그룹화된 로그 조회 (페이지네이션)"""
     try:
         page = request.args.get('page', 1, type=int)
@@ -282,7 +282,7 @@ def get_chat_sessions_grouped():
 
 @logs_bp.route('/chat-sessions/export', methods=['GET'])
 @admin_required
-def export_chat_sessions():
+def export_chat_sessions(current_user):
     """채팅 세션 CSV 내보내기"""
     try:
         user_id = request.args.get('user_id', type=int)
@@ -341,7 +341,7 @@ def export_chat_sessions():
 
 @logs_bp.route('/stats', methods=['GET'])
 @admin_required
-def get_stats():
+def get_stats(current_user):
     """전체 통계 조회"""
     try:
         # 사용자 통계

@@ -133,7 +133,7 @@ def bulk_register_students():
 
 @admin_bp.route('/users', methods=['GET'])
 @admin_required
-def get_users():
+def get_admin_users(current_user):
     """모든 사용자 조회"""
     users = UserService.get_all_users()
     return success_response([user.to_dict() for user in users])
@@ -182,7 +182,7 @@ def reset_user_password(user_id, *, validated_data: ResetPasswordRequest):
 
 @admin_bp.route('/videos', methods=['GET'])
 @admin_required
-def get_all_videos():
+def get_admin_videos(current_user):
     """관리자용: 모든 비디오 조회 (비활성 포함)"""
     videos = VideoService.get_all_videos_for_admin()
     return success_response([video.to_dict() for video in videos])
@@ -191,7 +191,7 @@ def get_all_videos():
 @admin_bp.route('/videos', methods=['POST'])
 @admin_required
 @validate_request(CreateVideoRequest)
-def create_video(*, validated_data: CreateVideoRequest):
+def create_video(current_user, *, validated_data: CreateVideoRequest):
     """비디오 생성"""
     video, error = VideoService.create_video(
         title=validated_data.title,
@@ -213,7 +213,7 @@ def create_video(*, validated_data: CreateVideoRequest):
 @admin_bp.route('/videos/<int:video_id>', methods=['PUT'])
 @admin_required
 @validate_request(UpdateVideoRequest)
-def update_video(video_id, *, validated_data: UpdateVideoRequest):
+def update_video(current_user, video_id, *, validated_data: UpdateVideoRequest):
     """비디오 업데이트"""
     update_data = validated_data.model_dump(exclude_none=True)
     video, error = VideoService.update_video(video_id, **update_data)
@@ -226,7 +226,7 @@ def update_video(video_id, *, validated_data: UpdateVideoRequest):
 
 @admin_bp.route('/videos/<int:video_id>', methods=['DELETE'])
 @admin_required
-def delete_video(video_id):
+def delete_video(current_user, video_id):
     """비디오 삭제"""
     success, error = VideoService.delete_video(video_id)
     
@@ -241,7 +241,7 @@ def delete_video(video_id):
 @admin_bp.route('/videos/<int:video_id>/scaffoldings', methods=['POST'])
 @admin_required
 @validate_request(CreateScaffoldingRequest)
-def create_scaffolding(video_id, *, validated_data: CreateScaffoldingRequest):
+def create_scaffolding(current_user, video_id, *, validated_data: CreateScaffoldingRequest):
     """스캐폴딩 생성"""
     scaffolding, error = ScaffoldingService.create_scaffolding(
         video_id=video_id,
@@ -259,7 +259,7 @@ def create_scaffolding(video_id, *, validated_data: CreateScaffoldingRequest):
 @admin_bp.route('/scaffoldings/<int:scaffolding_id>', methods=['PUT'])
 @admin_required
 @validate_request(UpdateScaffoldingRequest)
-def update_scaffolding(scaffolding_id, *, validated_data: UpdateScaffoldingRequest):
+def update_scaffolding(current_user, scaffolding_id, *, validated_data: UpdateScaffoldingRequest):
     """스캐폴딩 업데이트"""
     update_data = validated_data.model_dump(exclude_none=True)
     scaffolding, error = ScaffoldingService.update_scaffolding(scaffolding_id, **update_data)
@@ -272,7 +272,7 @@ def update_scaffolding(scaffolding_id, *, validated_data: UpdateScaffoldingReque
 
 @admin_bp.route('/scaffoldings/<int:scaffolding_id>', methods=['DELETE'])
 @admin_required
-def delete_scaffolding(scaffolding_id):
+def delete_scaffolding(current_user, scaffolding_id):
     """스캐폴딩 삭제"""
     success, error = ScaffoldingService.delete_scaffolding(scaffolding_id)
     
@@ -286,7 +286,7 @@ def delete_scaffolding(scaffolding_id):
 
 @admin_bp.route('/prompts', methods=['GET'])
 @admin_required
-def get_prompts():
+def get_admin_prompts(current_user):
     """모든 프롬프트 조회"""
     prompts = ChatPromptTemplate.query.all()
     return success_response([prompt.to_dict() for prompt in prompts])
@@ -295,7 +295,7 @@ def get_prompts():
 @admin_bp.route('/prompts', methods=['POST'])
 @admin_required
 @validate_request(CreatePromptRequest)
-def create_prompt(*, validated_data: CreatePromptRequest):
+def create_prompt(current_user, *, validated_data: CreatePromptRequest):
     """프롬프트 생성"""
     logger.info(f"Create prompt request - validated data: {validated_data}")
     user_id = int(get_jwt_identity())
@@ -330,7 +330,7 @@ def create_prompt(*, validated_data: CreatePromptRequest):
 @admin_bp.route('/prompts/<int:prompt_id>', methods=['PUT'])
 @admin_required
 @validate_request(UpdatePromptRequest)
-def update_prompt(prompt_id, *, validated_data: UpdatePromptRequest):
+def update_prompt(current_user, prompt_id, *, validated_data: UpdatePromptRequest):
     """프롬프트 업데이트"""
     try:
         prompt = ChatPromptTemplate.query.get(prompt_id)
@@ -361,7 +361,7 @@ def update_prompt(prompt_id, *, validated_data: UpdatePromptRequest):
 
 @admin_bp.route('/prompts/<int:prompt_id>', methods=['DELETE'])
 @admin_required
-def delete_prompt(prompt_id):
+def delete_prompt(current_user, prompt_id):
     """프롬프트 삭제"""
     try:
         prompt = ChatPromptTemplate.query.get(prompt_id)

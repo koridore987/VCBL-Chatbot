@@ -58,9 +58,12 @@ def get_database_url():
         encoded_password = urllib.parse.quote_plus(db_password)
         return f"postgresql+psycopg://{db_user}:{encoded_password}@/{db_name}?host=/cloudsql/{instance_connection_name}"
     
-    # 3. 기본값: SQLite (로컬 개발 환경)
-    # 주의: 프로덕션 환경과의 일관성을 위해 Docker Compose PostgreSQL 사용 권장
-    return 'sqlite:///vcbl_chatbot.db'
+    # 3. 기본 연결이 명시되지 않은 경우 오류 발생
+    raise ValueError(
+        "DATABASE_URL 환경 변수가 설정되지 않았습니다. "
+        "로컬 개발과 프로덕션 모두 PostgreSQL을 사용하므로 반드시 설정해야 합니다. "
+        "docker-compose 를 사용하는 경우에는 compose 파일에서 주입되는 값을 확인하세요."
+    )
 
 
 class Config:
