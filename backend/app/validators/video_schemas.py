@@ -15,6 +15,8 @@ class CreateVideoRequest(BaseModel):
     thumbnail_url: Optional[str] = Field(None, max_length=500)
     scaffolding_mode: str = Field(default='both', pattern='^(none|prompt|chat|both)$')
     order_index: int = Field(default=0, ge=0)
+    survey_url: Optional[str] = Field(None, max_length=500)
+    intro_text: Optional[str] = Field(None, max_length=5000)
     
     @field_validator('title', 'youtube_url', 'youtube_id')
     @classmethod
@@ -32,6 +34,8 @@ class UpdateVideoRequest(BaseModel):
     is_active: Optional[bool] = None
     learning_enabled: Optional[bool] = None
     order_index: Optional[int] = Field(None, ge=0)
+    survey_url: Optional[str] = Field(None, max_length=500)
+    intro_text: Optional[str] = Field(None, max_length=5000)
     
     @field_validator('title')
     @classmethod

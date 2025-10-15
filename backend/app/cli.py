@@ -9,8 +9,6 @@ from flask import Flask
 from flask_migrate import Migrate, upgrade, downgrade, current, history
 from sqlalchemy import text
 from app import create_app, db
-import secrets
-import string
 
 
 @click.group()
@@ -170,17 +168,15 @@ def init_admin(student_id, name, password):
 
         admin_name = name or os.getenv('ADMIN_NAME', 'Super Administrator')
 
-        # 비밀번호: 미제공 시 강력한 임시 비밀번호 생성
+        # 비밀번호: 환경 변수 또는 CLI 옵션으로 명시적으로 제공
         env_password = os.getenv('ADMIN_PASSWORD')
-        generated_temp_password = False
         if password:
             admin_password = password
         elif env_password:
             admin_password = env_password
         else:
-            alphabet = string.ascii_letters + string.digits + "!@#$%^&*()-_=+[]{}"  # 안전한 특수문자 집합
-            admin_password = ''.join(secrets.choice(alphabet) for _ in range(16))
-            generated_temp_password = True
+            click.echo("❌ 관리자 비밀번호가 설정되지 않았습니다. ADMIN_PASSWORD 환경 변수 또는 --password 옵션을 사용하세요.")
+            sys.exit(1)
 
         click.echo(f"Super 관리자 계정을 생성합니다: {admin_student_id}")
         
@@ -206,10 +202,6 @@ def init_admin(student_id, name, password):
         click.echo(f"학번: {admin.student_id}")
         click.echo(f"이름: {admin.name}")
         click.echo(f"역할: Super Administrator")
-        if generated_temp_password:
-            click.echo("- 임시 비밀번호: " + admin_password)
-            click.echo("")
-            click.echo("⚠️  보안 안내: 로그인 후 즉시 비밀번호를 변경하세요.")
         click.echo("=" * 60)
         click.echo("")
         click.echo("📝 주의사항:")

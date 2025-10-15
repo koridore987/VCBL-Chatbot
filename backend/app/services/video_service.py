@@ -148,7 +148,9 @@ class VideoService:
                 duration=kwargs.get('duration'),
                 thumbnail_url=thumbnail_url,
                 scaffolding_mode=kwargs.get('scaffolding_mode', 'both'),
-                order_index=kwargs.get('order_index', 0)
+                order_index=kwargs.get('order_index', 0),
+                survey_url=kwargs.get('survey_url'),
+                intro_text=kwargs.get('intro_text')
             )
             
             db.session.add(video)
@@ -181,12 +183,15 @@ class VideoService:
                 return None, '비디오를 찾을 수 없습니다'
             
             # 업데이트 가능한 필드
-            allowed_fields = ['title', 'description', 'scaffolding_mode', 'is_active', 'learning_enabled', 'order_index', 'survey_url']
+            allowed_fields = ['title', 'description', 'scaffolding_mode', 'is_active', 'learning_enabled', 'order_index', 'survey_url', 'intro_text']
             for field in allowed_fields:
                 if field in kwargs:
+                    logger.info(f"Updating field {field}: {kwargs[field]}")
                     setattr(video, field, kwargs[field])
             
+            logger.info(f"Video before commit - survey_url: {video.survey_url}, intro_text: {video.intro_text}")
             db.session.commit()
+            logger.info(f"Video after commit - survey_url: {video.survey_url}, intro_text: {video.intro_text}")
             
             logger.info(f"Video updated: {video_id}")
             return video, None

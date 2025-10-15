@@ -201,7 +201,9 @@ def create_video(current_user, *, validated_data: CreateVideoRequest):
         duration=validated_data.duration,
         thumbnail_url=validated_data.thumbnail_url,
         scaffolding_mode=validated_data.scaffolding_mode,
-        order_index=validated_data.order_index
+        order_index=validated_data.order_index,
+        survey_url=validated_data.survey_url,
+        intro_text=validated_data.intro_text
     )
     
     if error:
