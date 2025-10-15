@@ -302,6 +302,17 @@ const AdminVideos = () => {
                       >
                         {video.learning_enabled ? '학습 잠금' : '학습 열기'}
                       </button>
+                    {video.survey_url && (
+                      <a
+                        href={video.survey_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-secondary"
+                        style={{ fontSize: '14px' }}
+                      >
+                        설문 열기
+                      </a>
+                    )}
                       <button
                         onClick={() => {
                           setEditingVideo(video)
@@ -319,6 +330,20 @@ const AdminVideos = () => {
                       </button>
                     </div>
                   </div>
+                {(video.survey_url || video.intro_text) && (
+                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #eee' }}>
+                    {video.survey_url && (
+                      <p style={{ fontSize: '13px', color: '#555', wordBreak: 'break-all', marginBottom: '6px' }}>
+                        <strong>설문:</strong> {video.survey_url}
+                      </p>
+                    )}
+                    {video.intro_text && (
+                      <p style={{ fontSize: '13px', color: '#555', whiteSpace: 'pre-wrap', maxHeight: '6em', overflow: 'hidden' }}>
+                        <strong>안내:</strong> {video.intro_text}
+                      </p>
+                    )}
+                  </div>
+                )}
                 </div>
               ))}
             </div>

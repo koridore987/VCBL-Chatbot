@@ -311,28 +311,11 @@ const LearningInterface = () => {
                 </div>
                 
                 <div className="prose prose-lg max-w-none">
-                  {video.intro_text ? (
+                  {video.intro_text !== undefined && video.intro_text !== null && video.intro_text !== '' ? (
                     <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
                       {video.intro_text}
                     </div>
-                  ) : (
-                    <div className="text-gray-600 bg-gray-50 p-6 rounded-lg">
-                      <p className="mb-3">
-                        <strong className="text-gray-800">📚 학습 목표</strong><br />
-                        이 비디오를 통해 핵심 개념을 이해하고 실습할 수 있습니다.
-                      </p>
-                      <p className="mb-3">
-                        <strong className="text-gray-800">✅ 학습 방법</strong><br />
-                        1. 비디오를 주의깊게 시청하세요<br />
-                        2. 학습 질문에 답변하면서 이해도를 점검하세요<br />
-                        3. AI 대화를 통해 궁금한 점을 해결하세요
-                      </p>
-                      <p>
-                        <strong className="text-gray-800">⏱️ 예상 소요 시간</strong><br />
-                        약 {Math.ceil((video.duration || 600) / 60)}분 (비디오 시청 + 학습 활동)
-                      </p>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
                 
                 <div className="mt-8 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
