@@ -121,28 +121,259 @@ vcbl-chatbot/
 - 레이트 리밋: 민감 엔드포인트에 분당 호출 제한(환경별 on/off)
 - 표준 응답: `success_response`/`error_response` 일관 포맷, 전역 에러 핸들러
 
-## 환경 변수(핵심)
+## 시작하기
 
-Backend
+### 1. 로컬 개발 (Docker Compose)
 
-```
-SECRET_KEY=...
-JWT_SECRET_KEY=...
-OPENAI_API_KEY=...
-MODEL_NAME=gpt-4o-mini
-DATABASE_URL=postgresql+psycopg2://user:password@host:5432/db
-# 또는 CLOUD_SQL_INSTANCE 사용 시 DB_USER/DB_PASSWORD/DB_NAME와 조합
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
-RATELIMIT_STORAGE_URL=memory://
-DAILY_TOKEN_LIMIT=50000
-SUMMARY_TRIGGER_TOKENS=3500
+가장 간단한 방법입니다. Docker와 Docker Compose만 설치되어 있으면 됩니다.
+
+```bash
+# 1. 환경 변수 설정
+cp .env.example .env
+# .env 파일을 열어 OPENAI_API_KEY 등 필수 값을 입력하세요
+
+# 2. Docker Compose로 실행
+docker-compose up -d
+
+# 3. 데이터베이스 마이그레이션
+docker-compose exec app flask db upgrade
+
+# 4. 초기 관리자 계정 생성
+docker-compose exec app flask init-admin
+
+# 5. 애플리케이션 접속
+# Backend: http://localhost:8080
+# Frontend 개발 서버 (선택): cd frontend && npm run dev
 ```
 
-Frontend
+서비스 중지:
+```bash
+docker-compose down
+```
 
+### 2. 로컬 개발 (분리 실행)
+
+Backend와 Frontend를 따로 실행하는 방법입니다.
+
+**Backend:**
+```bash
+cd backend
+
+# 가상 환경 생성 및 활성화
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 의존성 설치
+pip install -r requirements.txt
+
+# 환경 변수 설정
+cp ../.env.example ../.env
+# .env 파일 수정
+
+# 데이터베이스 마이그레이션
+flask db upgrade
+
+# 개발 서버 실행
+python run.py
 ```
-VITE_API_URL=http://localhost:8080/api
+
+**Frontend:**
+```bash
+cd frontend
+
+# 의존성 설치
+npm install
+
+# 환경 변수 설정 (선택)
+echo "VITE_API_URL=http://localhost:8080/api" > .env.local
+
+# 개발 서버 실행
+npm run dev
 ```
+
+### 3. 프로덕션 빌드 테스트 (로컬 Docker)
+
+프로덕션과 동일한 환경을 로컬에서 테스트합니다.
+
+```bash
+# .env 파일 설정 후
+./scripts/local-docker.sh
+
+# 애플리케이션 접속: http://localhost:8080
+# 로그 확인: docker logs -f vcbl-chatbot-test
+```
+
+## Google Cloud 배포
+
+### 1. 초기 설정
+
+Google Cloud 프로젝트 생성 후 다음 스크립트를 실행하세요:
+
+```bash
+# GCP 프로젝트 ID 설정
+export GCP_PROJECT_ID="your-project-id"
+
+# 초기 설정 실행 (Cloud SQL, Secret Manager 등)
+./scripts/setup-gcloud.sh
+```
+
+이 스크립트는 다음을 수행합니다:
+- 필요한 Google Cloud API 활성화 (Cloud Run, Cloud SQL, Secret Manager 등)
+- Cloud SQL PostgreSQL 인스턴스 생성
+- Secret Manager에 시크릿 등록 (SECRET_KEY, JWT_SECRET_KEY, OPENAI_API_KEY, DATABASE_URL)
+- Cloud Run 서비스 계정에 권한 부여
+
+### 2. 배포
+
+**방법 1: Cloud Build 자동 배포 (권장)**
+
+GitHub 저장소와 연동하여 push할 때마다 자동 배포:
+
+```bash
+# Cloud Build 트리거 생성
+gcloud builds triggers create github \
+  --repo-name=vcbl-chatbot \
+  --repo-owner=YOUR_GITHUB_USERNAME \
+  --branch-pattern='^main$' \
+  --build-config=cloudbuild.yaml \
+  --project=$GCP_PROJECT_ID
+```
+
+또는 [Cloud Build Console](https://console.cloud.google.com/cloud-build/triggers)에서 수동으로 설정할 수 있습니다.
+
+**방법 2: 로컬에서 직접 배포**
+
+```bash
+./scripts/deploy.sh
+```
+
+### 3. 배포 후 설정
+
+```bash
+# 데이터베이스 마이그레이션 (최초 1회)
+gcloud run jobs create vcbl-chatbot-migrate \
+  --image=gcr.io/$GCP_PROJECT_ID/vcbl-chatbot:latest \
+  --region=asia-northeast3 \
+  --set-cloudsql-instances=$CLOUD_SQL_INSTANCE \
+  --set-secrets=DATABASE_URL=DATABASE_URL:latest \
+  --command=flask,db,upgrade
+
+gcloud run jobs execute vcbl-chatbot-migrate --region=asia-northeast3
+
+# 초기 관리자 계정 생성
+gcloud run jobs create vcbl-chatbot-init-admin \
+  --image=gcr.io/$GCP_PROJECT_ID/vcbl-chatbot:latest \
+  --region=asia-northeast3 \
+  --set-cloudsql-instances=$CLOUD_SQL_INSTANCE \
+  --set-secrets=DATABASE_URL=DATABASE_URL:latest \
+  --command=flask,init-admin
+
+gcloud run jobs execute vcbl-chatbot-init-admin --region=asia-northeast3
+```
+
+### 4. 로그 확인
+
+```bash
+# 실시간 로그 확인
+gcloud run services logs tail vcbl-chatbot --region=asia-northeast3
+
+# 최근 로그 조회
+gcloud run services logs read vcbl-chatbot --region=asia-northeast3 --limit=50
+```
+
+### 5. Cloud SQL 연결 확인
+
+```bash
+# Cloud SQL 인스턴스 상태 확인
+gcloud sql instances describe vcbl-chatbot-db
+
+# 데이터베이스 접속 (로컬에서)
+gcloud sql connect vcbl-chatbot-db --user=vcbl_user --database=vcbl_chatbot
+```
+
+## 환경 변수
+
+상세한 환경 변수 목록은 다음 파일을 참고하세요:
+- 로컬 개발: `.env.example`
+- 프로덕션: `.env.production.example`
+
+### 핵심 환경 변수
+
+**Backend:**
+- `SECRET_KEY`: Flask 세션 암호화 키
+- `JWT_SECRET_KEY`: JWT 토큰 서명 키
+- `OPENAI_API_KEY`: OpenAI API 키
+- `DATABASE_URL`: PostgreSQL 연결 문자열
+- `CORS_ORIGINS`: 허용된 CORS 오리진 (쉼표로 구분)
+
+**Frontend (개발 시):**
+- `VITE_API_URL`: 백엔드 API URL (기본값: `http://localhost:8080/api`)
+
+## 유용한 명령어
+
+### Docker Compose
+```bash
+# 로그 확인
+docker-compose logs -f
+
+# 특정 서비스만 재시작
+docker-compose restart app
+
+# 데이터베이스 접속
+docker-compose exec db psql -U vcbl_user -d vcbl_chatbot
+
+# 백엔드 쉘 접속
+docker-compose exec app bash
+```
+
+### Flask CLI
+```bash
+# 데이터베이스 마이그레이션 생성
+flask db migrate -m "description"
+
+# 마이그레이션 적용
+flask db upgrade
+
+# 마이그레이션 롤백
+flask db downgrade
+
+# 초기 관리자 계정 생성
+flask init-admin
+
+# 사용 가능한 명령어 확인
+flask --help
+```
+
+### Google Cloud
+```bash
+# 서비스 상태 확인
+gcloud run services describe vcbl-chatbot --region=asia-northeast3
+
+# 환경 변수 업데이트
+gcloud run services update vcbl-chatbot \
+  --set-env-vars="KEY=VALUE" \
+  --region=asia-northeast3
+
+# 시크릿 업데이트
+echo -n "new-value" | gcloud secrets versions add SECRET_NAME --data-file=-
+
+# 서비스 URL 확인
+gcloud run services describe vcbl-chatbot \
+  --region=asia-northeast3 \
+  --format="value(status.url)"
+```
+
+## 트러블슈팅
+
+### 로컬 개발
+- **포트 충돌**: `.env`에서 `PORT` 값을 변경하거나 다른 서비스를 중지하세요.
+- **데이터베이스 연결 실패**: Docker Compose가 실행 중인지 확인하고 `DATABASE_URL`이 올바른지 확인하세요.
+- **CORS 에러**: `.env`의 `CORS_ORIGINS`에 프론트엔드 URL을 추가하세요.
+
+### Cloud Run 배포
+- **빌드 실패**: `cloudbuild.yaml`의 설정을 확인하고 필요한 API가 활성화되어 있는지 확인하세요.
+- **데이터베이스 연결 실패**: Cloud SQL 인스턴스 연결 문자열과 Secret Manager의 `DATABASE_URL`을 확인하세요.
+- **시크릿 접근 불가**: Cloud Run 서비스 계정에 Secret Manager 접근 권한이 있는지 확인하세요.
 
 ## 라이선스
 

@@ -133,8 +133,9 @@ QUICKSTART.md
 # ===================================
 # Config Examples
 # ===================================
-env.example
-*.example
+# Allow .env.example files for documentation
+# env.example
+# *.example
 
 # ===================================
 # Deployment

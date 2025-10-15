@@ -64,13 +64,13 @@ Thumbs.db
 docker-compose.yml
 .dockerignore
 
-# Scripts (except start.sh)
+# Scripts (deployment scripts not needed in container)
 scripts/
-!scripts/start.sh
 
-# Config (except nginx)
-config/
-!config/nginx-full.conf
+# Config (include nginx-cloud.conf for Cloud Run)
+config/nginx.conf
+config/nginx-https.conf
+config/nginx-full.conf
 
 # Database
 *.db
