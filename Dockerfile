@@ -1,20 +1,25 @@
+# syntax=docker/dockerfile:1.6
 # ============================================
-# Multi-stage Dockerfile for Cloud Run
+# Multi-arch, multi-stage Dockerfile for Cloud Run and local
 # Frontend (React/Vite) + Backend (Flask/Gunicorn) + Nginx
+# Works on linux/amd64 and linux/arm64
 # ============================================
+
+ARG TARGETPLATFORM=linux/amd64
+ARG BUILDPLATFORM=linux/amd64
 
 # ============================================
 # Stage 1: Build Frontend
 # ============================================
-FROM node:18-alpine AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:18-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
 # Copy frontend package files
 COPY frontend/package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies including devDependencies (needed for Vite build)
+RUN npm ci
 
 # Copy frontend source
 COPY frontend/ ./
@@ -25,7 +30,7 @@ RUN npm run build
 # ============================================
 # Stage 2: Build Backend Dependencies
 # ============================================
-FROM python:3.11-slim AS backend-builder
+FROM --platform=$BUILDPLATFORM python:3.11-slim AS backend-builder
 
 WORKDIR /app
 
@@ -45,7 +50,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # ============================================
 # Stage 3: Final Runtime Image
 # ============================================
-FROM python:3.11-slim
+FROM --platform=$TARGETPLATFORM python:3.11-slim
 
 WORKDIR /app
 
@@ -54,6 +59,7 @@ RUN apt-get update && apt-get install -y \
     nginx \
     libpq5 \
     supervisor \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python packages from builder
@@ -62,6 +68,10 @@ COPY --from=backend-builder /usr/local/bin /usr/local/bin
 
 # Copy backend application
 COPY backend/ ./backend/
+
+# Copy entrypoint script
+COPY backend/entrypoint.sh /app/backend/entrypoint.sh
+RUN chmod +x /app/backend/entrypoint.sh
 
 # Copy frontend build output to Nginx directory
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
@@ -106,5 +116,5 @@ WORKDIR /app/backend
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:${PORT}/health || exit 1
 
-# Start supervisor to run both Nginx and Gunicorn
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Start via entrypoint which runs migrations then supervisor (nginx + gunicorn)
+CMD ["/app/backend/entrypoint.sh"]

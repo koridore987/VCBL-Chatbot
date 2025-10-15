@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL 데이터베이스 (로컬 개발 권장)
   db:
@@ -66,13 +64,13 @@ services:
       # 서버 설정
       PORT: 8080
       FLASK_ENV: ${FLASK_ENV:-development}
+      FLASK_APP: run.py
       
       # CORS 설정
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
       
-      # 초기 관리자 계정 설정 (Docker Compose에서는 자동 생성 비활성화됨)
-      # CLI 명령어로 생성: docker-compose exec app flask init-admin
-      ADMIN_STUDENT_ID: ${ADMIN_STUDENT_ID:-super}
+      # 초기 관리자 계정 설정 (자동 생성됨)
+      ADMIN_STUDENT_ID: ${ADMIN_STUDENT_ID:-9999000001}
       ADMIN_NAME: ${ADMIN_NAME:-Super Administrator}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-super1234}
     
@@ -81,6 +79,24 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # 초기화 스크립트 실행
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...' &&
+        sleep 5 &&
+        echo 'Current directory:' &&
+        pwd &&
+        echo 'Files in current directory:' &&
+        ls -la &&
+        echo 'Running database migrations...' &&
+        cd /app/backend &&
+        export FLASK_APP=run.py &&
+        python -m flask db upgrade &&
+        echo 'Creating super admin account...' &&
+        python -m flask init-admin &&
+        echo 'Starting application...' &&
+        gunicorn --bind 0.0.0.0:8080 --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile - run:app
+      "
 
 volumes:
   postgres_data:
