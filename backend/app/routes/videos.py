@@ -5,6 +5,7 @@ from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.video_service import VideoService
 from app.services.scaffolding_service import ScaffoldingService
+from app.services.learning_progress_service import LearningProgressService
 from app.utils import success_response, error_response, validate_request
 from app.validators import ScaffoldingResponseRequest
 try:
@@ -22,10 +23,33 @@ videos_bp = Blueprint('videos', __name__)
 @jwt_required()
 def get_videos():
     """모든 비디오 조회"""
+    user_id = int(get_jwt_identity())
     logger.info("GET /api/videos - fetching all active videos")
+    
     videos = VideoService.get_all_videos()
+    progress_map = LearningProgressService.get_progress_map_for_user(user_id)
     logger.info(f"GET /api/videos - count={len(videos)}")
-    return success_response([video.to_dict() for video in videos])
+    
+    response_payload = []
+    for video in videos:
+        video_data = video.to_dict()
+        default_progress = {
+            'status': 'not_started',
+            'started_at': None,
+            'last_activity_at': None,
+            'completed_at': None,
+            'survey_completed': False,
+            'survey_completed_at': None,
+            'total': 0,
+            'completed': 0,
+            'is_completed': False
+        }
+        merged_progress = {**default_progress, **progress_map.get(video.id, {})}
+        merged_progress['is_completed'] = merged_progress['status'] == 'completed'
+        video_data['learning_progress'] = merged_progress
+        response_payload.append(video_data)
+    
+    return success_response(response_payload)
 
 
 @videos_bp.route('/<int:video_id>', methods=['GET'])
@@ -156,3 +180,61 @@ def log_video_event(video_id):
     )
     
     return success_response({'message': '이벤트가 기록되었습니다'})
+
+
+@videos_bp.route('/<int:video_id>/survey-complete', methods=['POST'])
+@jwt_required()
+def mark_survey_completed(video_id):
+    """설문 완료 확인"""
+    user_id = int(get_jwt_identity())
+    
+    try:
+        progress = LearningProgressService.mark_survey_completed(user_id, video_id)
+    except Exception as e:
+        logger.error(f"Failed to mark survey completion for user {user_id}, video {video_id}: {str(e)}")
+        return error_response('설문 완료 처리 중 오류가 발생했습니다', 500)
+    
+    VideoService.log_video_event(
+        user_id=user_id,
+        video_id=video_id,
+        event_type='survey_completion_confirmed',
+        event_data={'source': 'manual_confirmation'},
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent', '')
+    )
+    
+    return success_response({
+        'message': '설문 완료가 기록되었습니다',
+        'learning_progress': progress.to_dict()
+    })
+
+
+@videos_bp.route('/<int:video_id>/complete', methods=['POST'])
+@jwt_required()
+def complete_learning(video_id):
+    """학습 종료 처리"""
+    user_id = int(get_jwt_identity())
+    data = request.get_json() or {}
+    survey_confirmed = bool(data.get('survey_confirmed', False))
+    
+    try:
+        if survey_confirmed:
+            LearningProgressService.mark_survey_completed(user_id, video_id)
+        progress = LearningProgressService.mark_completed(user_id, video_id)
+    except Exception as e:
+        logger.error(f"Failed to complete learning for user {user_id}, video {video_id}: {str(e)}")
+        return error_response('학습 종료 처리 중 오류가 발생했습니다', 500)
+    
+    VideoService.log_video_event(
+        user_id=user_id,
+        video_id=video_id,
+        event_type='learning_session_completed',
+        event_data={'survey_confirmed': survey_confirmed},
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent', '')
+    )
+    
+    return success_response({
+        'message': '학습이 종료되었습니다',
+        'learning_progress': progress.to_dict()
+    })

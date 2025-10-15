@@ -4,6 +4,7 @@
 """
 from app import db
 from app.models.scaffolding import Scaffolding, ScaffoldingResponse
+from app.services.learning_progress_service import LearningProgressService
 from typing import Optional, Tuple
 import logging
 
@@ -149,6 +150,12 @@ class ScaffoldingService:
                 logger.info(f"Scaffolding response created for user {user_id}")
             
             db.session.commit()
+            
+            try:
+                LearningProgressService.mark_activity(user_id, video_id)
+            except Exception as e:
+                logger.error(f"Failed to update learning progress after response: {str(e)}")
+            
             return True, None
             
         except Exception as e:
@@ -203,6 +210,10 @@ class ScaffoldingService:
                     db.session.add(new_response)
             
             db.session.commit()
+            try:
+                LearningProgressService.mark_activity(user_id, video_id)
+            except Exception as e:
+                logger.error(f"Failed to update learning progress after bulk responses: {str(e)}")
             logger.info(f"Bulk scaffolding responses saved for user {user_id}, video {video_id}")
             return True, None
             
@@ -210,4 +221,3 @@ class ScaffoldingService:
             db.session.rollback()
             logger.error(f"Save bulk scaffolding responses error: {str(e)}")
             return False, '응답 저장 중 오류가 발생했습니다'
-

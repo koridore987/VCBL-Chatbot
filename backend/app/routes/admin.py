@@ -9,6 +9,7 @@ from app.models.chat_prompt_template import ChatPromptTemplate
 from app.services.user_service import UserService
 from app.services.video_service import VideoService
 from app.services.scaffolding_service import ScaffoldingService
+from app.services.learning_progress_service import LearningProgressService
 from app.utils import (
     admin_required, super_admin_required, validate_request,
     success_response, error_response
@@ -186,6 +187,22 @@ def get_admin_videos(current_user):
     """관리자용: 모든 비디오 조회 (비활성 포함)"""
     videos = VideoService.get_all_videos_for_admin()
     return success_response([video.to_dict() for video in videos])
+
+
+# ==================== 학습 진행 현황 ====================
+
+@admin_bp.route('/progress', methods=['GET'])
+@admin_required
+def get_learning_progress(current_user):
+    """학습 진행 현황 조회"""
+    limit = request.args.get('limit', type=int) or 50
+    recent_progress = LearningProgressService.get_recent_progress(limit=limit)
+    status_counts = LearningProgressService.get_status_counts()
+    
+    return success_response({
+        'recent': recent_progress,
+        'status_counts': status_counts
+    })
 
 
 @admin_bp.route('/videos', methods=['POST'])

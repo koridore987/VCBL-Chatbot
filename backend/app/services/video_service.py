@@ -6,6 +6,7 @@ from app import db
 from app.models.video import Video
 from app.models.scaffolding import Scaffolding, ScaffoldingResponse
 from app.models.event_log import EventLog
+from app.services.learning_progress_service import LearningProgressService
 from sqlalchemy.orm import joinedload
 from typing import List, Optional, Tuple
 import logging
@@ -59,60 +60,66 @@ class VideoService:
             
             video_data = video.to_dict()
             
+            # 학습 진행 상황 초기화
+            try:
+                LearningProgressService.mark_started(user_id, video_id)
+                progress_state = LearningProgressService.get_progress(user_id, video_id)
+            except Exception as e:
+                logger.error(f"Failed to update learning progress for user {user_id}, video {video_id}: {str(e)}")
+                progress_state = None
+            
             # 스캐폴딩 포함
             if video.scaffolding_mode in ['prompt', 'both']:
-                # 활성 스캐폴딩 모두 조회 (1번 쿼리)
                 scaffoldings = Scaffolding.query.filter_by(
                     video_id=video_id, 
                     is_active=True
                 ).order_by(Scaffolding.order_index).all()
                 
                 if scaffoldings:
-                    # 모든 스캐폴딩의 ID 수집
                     scaffolding_ids = [s.id for s in scaffoldings]
                     
-                    # 해당 사용자의 모든 응답을 한 번에 조회 (1번 쿼리)
                     responses = ScaffoldingResponse.query.filter(
                         ScaffoldingResponse.scaffolding_id.in_(scaffolding_ids),
                         ScaffoldingResponse.user_id == user_id
                     ).all()
                     
-                    # 응답을 scaffolding_id로 매핑
                     response_map = {r.scaffolding_id: r for r in responses}
                     
-                    # 스캐폴딩 데이터 구성 (메모리에서 처리)
                     video_data['scaffoldings'] = []
                     for scaffolding in scaffoldings:
                         scaffolding_data = scaffolding.to_dict()
-                        
-                        # 매핑에서 응답 찾기
                         if scaffolding.id in response_map:
                             scaffolding_data['user_response'] = response_map[scaffolding.id].to_dict()
-                        
                         video_data['scaffoldings'].append(scaffolding_data)
                     
-                    # 학습 진행률 계산
                     total_scaffoldings = len(scaffoldings)
                     completed_scaffoldings = len(response_map)
-                    video_data['learning_progress'] = {
-                        'total': total_scaffoldings,
-                        'completed': completed_scaffoldings,
-                        'is_completed': total_scaffoldings > 0 and completed_scaffoldings == total_scaffoldings
-                    }
+                    scaffolding_completed = total_scaffoldings > 0 and completed_scaffoldings == total_scaffoldings
                 else:
                     video_data['scaffoldings'] = []
-                    video_data['learning_progress'] = {
-                        'total': 0,
-                        'completed': 0,
-                        'is_completed': False
-                    }
+                    total_scaffoldings = 0
+                    completed_scaffoldings = 0
+                    scaffolding_completed = False
             else:
-                # 스캐폴딩이 없는 경우 (chat only 또는 none)
-                video_data['learning_progress'] = {
-                    'total': 0,
-                    'completed': 0,
-                    'is_completed': True  # 스캐폴딩이 없으면 완료로 간주
-                }
+                total_scaffoldings = 0
+                completed_scaffoldings = 0
+                scaffolding_completed = True  # 스캐폴딩이 없으면 완료로 간주
+            
+            default_progress = {
+                'status': 'not_started',
+                'started_at': None,
+                'last_activity_at': None,
+                'completed_at': None,
+                'survey_completed': False,
+                'survey_completed_at': None,
+            }
+            merged_progress = {**default_progress, **(progress_state or {})}
+            merged_progress.update({
+                'total': total_scaffoldings,
+                'completed': completed_scaffoldings,
+                'is_completed': scaffolding_completed
+            })
+            video_data['learning_progress'] = merged_progress
             
             return video_data, None
             
@@ -258,4 +265,10 @@ class VideoService:
         except Exception as e:
             db.session.rollback()
             logger.error(f"Log video event error: {str(e)}")
+            return
 
+        if video_id:
+            try:
+                LearningProgressService.mark_activity(user_id, video_id)
+            except Exception as e:
+                logger.error(f"Failed to mark learning activity for user {user_id}, video {video_id}: {str(e)}")
