@@ -7,23 +7,23 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/vcbl-chatbot:$COMMIT_SHA'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/vcbl-chatbot-repo/vcbl-chatbot:$COMMIT_SHA'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/vcbl-chatbot:latest'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/vcbl-chatbot-repo/vcbl-chatbot:latest'
       - '.'
     id: 'build-image'
 
-  # Step 2: Push the image to Google Container Registry
+  # Step 2: Push the image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/vcbl-chatbot:$COMMIT_SHA'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/vcbl-chatbot-repo/vcbl-chatbot:$COMMIT_SHA'
     id: 'push-image-sha'
 
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/vcbl-chatbot:latest'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/vcbl-chatbot-repo/vcbl-chatbot:latest'
     id: 'push-image-latest'
 
   # Step 3: Deploy to Cloud Run
@@ -34,7 +34,7 @@ steps:
       - 'deploy'
       - 'vcbl-chatbot'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/vcbl-chatbot:$COMMIT_SHA'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/vcbl-chatbot-repo/vcbl-chatbot:$COMMIT_SHA'
       - '--region'
       - '${_REGION}'
       - '--platform'
@@ -49,7 +49,7 @@ steps:
       - '--max-instances'
       - '${_MAX_INSTANCES}'
       - '--set-env-vars'
-      - 'FLASK_ENV=production,PORT=8080'
+      - 'FLASK_ENV=production,PORT=8080,INIT_ADMIN_ON_START=true,ADMIN_STUDENT_ID=9999000001,ADMIN_NAME=Super Administrator,ADMIN_PASSWORD:ADMIN_PASSWORD:latest'
       - '--add-cloudsql-instances'
       - '${_CLOUD_SQL_INSTANCE}'
       - '--set-secrets'
@@ -65,10 +65,10 @@ substitutions:
   _MAX_INSTANCES: '10'
   _CLOUD_SQL_INSTANCE: 'PROJECT_ID:REGION:INSTANCE_NAME'  # Update this
 
-# Images to be pushed to Container Registry
+# Images to be pushed to Artifact Registry
 images:
-  - 'gcr.io/$PROJECT_ID/vcbl-chatbot:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/vcbl-chatbot:latest'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/vcbl-chatbot-repo/vcbl-chatbot:$COMMIT_SHA'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/vcbl-chatbot-repo/vcbl-chatbot:latest'
 
 # Build timeout (default is 10 minutes)
 timeout: '1200s'
