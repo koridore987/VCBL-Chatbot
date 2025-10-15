@@ -1,4 +1,4 @@
-name: Deploy Production (main)
+name: Deploy to Production (main branch)
 
 on:
   push:
@@ -49,7 +49,7 @@ jobs:
           docker push "${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.sha_tag }}"
           docker push "${{ steps.meta.outputs.image }}:latest"
 
-      - name: Deploy to Cloud Run (production)
+      - name: Deploy to Cloud Run (Production)
         run: |
           gcloud run deploy "${{ env.SERVICE_NAME }}" \
             --image "${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.sha_tag }}" \
@@ -64,4 +64,12 @@ jobs:
             --set-env-vars "REDIS_URL=${{ secrets.REDIS_URL }}" \
             --set-env-vars "CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}"
 
-
+      - name: Show deployment URL
+        run: |
+          echo "🚀 Production deployment completed!"
+          echo "Service URL:"
+          gcloud run services describe "${{ env.SERVICE_NAME }}" --region "${{ env.REGION }}" --format 'value(status.url)'
+          echo ""
+          echo "📝 Note: This is a closed beta deployment."
+          echo "   Access is controlled through Google Cloud Console."
+          echo "   To make it public, update the Cloud Run service settings."

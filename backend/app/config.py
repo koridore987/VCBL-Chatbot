@@ -53,7 +53,10 @@ def get_database_url():
         
         # Cloud Run에서는 Unix 소켓을 통해 Cloud SQL에 연결
         # 형식: postgresql+psycopg://USER:PASSWORD@/DATABASE?host=/cloudsql/INSTANCE_CONNECTION_NAME
-        return f"postgresql+psycopg://{db_user}:{db_password}@/{db_name}?host=/cloudsql/{instance_connection_name}"
+        # URL 인코딩 처리
+        import urllib.parse
+        encoded_password = urllib.parse.quote_plus(db_password)
+        return f"postgresql+psycopg://{db_user}:{encoded_password}@/{db_name}?host=/cloudsql/{instance_connection_name}"
     
     # 3. 기본값: SQLite (로컬 개발 환경)
     # 주의: 프로덕션 환경과의 일관성을 위해 Docker Compose PostgreSQL 사용 권장

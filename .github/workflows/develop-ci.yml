@@ -1,10 +1,10 @@
-name: CI - Test and Lint
+name: Develop CI - Test and Lint
 
 on:
+  push:
+    branches: [ "develop" ]
   pull_request:
-    branches:
-      - main
-      - develop
+    branches: [ "develop" ]
 
 jobs:
   backend-test:
@@ -61,4 +61,3 @@ jobs:
         run: |
           cd frontend
           npm run build
-
