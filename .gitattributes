@@ -1,0 +1,40 @@
+# Git attributes for cross-platform compatibility
+# Ensure shell scripts always use LF line endings
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Ensure Docker files use LF
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+*.dockerfile text eol=lf
+
+# Ensure configuration files use LF
+*.conf text eol=lf
+*.ini text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+
+# Ensure Python files use LF
+*.py text eol=lf
+requirements.txt text eol=lf
+
+# Ensure JavaScript/TypeScript files use LF
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+
+# Ensure CSS files use LF
+*.css text eol=lf
+
+# Ensure HTML files use LF
+*.html text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
