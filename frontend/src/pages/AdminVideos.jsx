@@ -1,7 +1,159 @@
 import { useEffect, useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { javascript } from '@codemirror/lang-javascript'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import {
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import api from '../services/api'
+
+// 드롭 인디케이터 컴포넌트
+const DropIndicator = ({ isVisible }) => (
+  <div
+    style={{
+      height: '3px',
+      backgroundColor: '#3b82f6',
+      borderRadius: '2px',
+      margin: '8px 0',
+      opacity: isVisible ? 1 : 0,
+      transition: 'opacity 0.2s ease',
+      boxShadow: '0 0 8px rgba(59, 130, 246, 0.5)'
+    }}
+  />
+)
+
+// 드래그 핸들 아이콘 컴포넌트
+const DragHandle = () => (
+  <svg 
+    width="20" 
+    height="20" 
+    viewBox="0 0 20 20" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    style={{ 
+      cursor: 'grab',
+      color: '#9ca3af',
+      transition: 'all 0.2s ease'
+    }}
+  >
+    <circle cx="7" cy="5" r="1.5" fill="currentColor" opacity="0.6"/>
+    <circle cx="13" cy="5" r="1.5" fill="currentColor" opacity="0.6"/>
+    <circle cx="7" cy="10" r="1.5" fill="currentColor" opacity="0.6"/>
+    <circle cx="13" cy="10" r="1.5" fill="currentColor" opacity="0.6"/>
+    <circle cx="7" cy="15" r="1.5" fill="currentColor" opacity="0.6"/>
+    <circle cx="13" cy="15" r="1.5" fill="currentColor" opacity="0.6"/>
+  </svg>
+)
+
+// 정렬 가능한 질문 아이템 컴포넌트
+const SortableScaffoldingItem = ({ scaffolding, index, isActive, onEdit, onDelete }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+    isOver,
+  } = useSortable({ id: scaffolding.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? 'none' : transition,
+    opacity: isDragging ? 0.8 : 1,
+    zIndex: isDragging ? 1000 : 'auto',
+    boxShadow: isDragging ? '0 8px 25px rgba(0,0,0,0.15)' : 'none',
+    borderRadius: isDragging ? '8px' : '4px',
+    border: isDragging ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+    backgroundColor: isDragging ? '#f8fafc' : 'white',
+    scale: isDragging ? '1.02' : '1',
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="card"
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '60px' }}>
+        {/* 드래그 핸들 - 중앙에 위치 */}
+        <div
+          {...attributes}
+          {...listeners}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            padding: '8px',
+            marginRight: '12px',
+            borderRadius: '6px',
+            backgroundColor: isDragging ? '#e0f2fe' : 'transparent',
+            border: isDragging ? '1px solid #0ea5e9' : '1px solid transparent',
+            transition: 'all 0.2s ease',
+            minWidth: '32px',
+            minHeight: '32px'
+          }}
+          onMouseEnter={(e) => {
+            if (!isDragging) {
+              e.target.style.backgroundColor = '#f1f5f9'
+              e.target.style.borderColor = '#cbd5e1'
+              e.target.style.transform = 'scale(1.05)'
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isDragging) {
+              e.target.style.backgroundColor = 'transparent'
+              e.target.style.borderColor = 'transparent'
+              e.target.style.transform = 'scale(1)'
+            }
+          }}
+        >
+          <DragHandle />
+        </div>
+        
+        <div style={{ flex: 1 }}>
+          <h4>질문 {index + 1}: {scaffolding.title}</h4>
+          <p style={{ color: '#666', marginTop: '10px', whiteSpace: 'pre-wrap' }}>
+            {scaffolding.prompt_text}
+          </p>
+          <p style={{ fontSize: '14px', color: '#999', marginTop: '5px' }}>
+            순서: {scaffolding.order_index}
+          </p>
+        </div>
+        
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => onEdit(scaffolding)}
+            className="btn btn-secondary"
+          >
+            수정
+          </button>
+          <button
+            onClick={() => onDelete(scaffolding.id)}
+            className="btn btn-danger"
+          >
+            삭제
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const AdminVideos = () => {
   const [activeTab, setActiveTab] = useState('videos')
@@ -111,6 +263,17 @@ const AdminVideos = () => {
       fetchScaffoldings(selectedVideo.id)
     } catch (err) {
       alert('삭제에 실패했습니다')
+    }
+  }
+
+  const handleReorderScaffoldings = async (reorderData) => {
+    try {
+      await api.put(`/admin/videos/${selectedVideo.id}/scaffoldings/reorder`, {
+        scaffoldings: reorderData
+      })
+      fetchScaffoldings(selectedVideo.id)
+    } catch (err) {
+      alert('순서 변경에 실패했습니다')
     }
   }
 
@@ -385,6 +548,7 @@ const AdminVideos = () => {
               onSave={handleSaveScaffolding}
               onDelete={handleDeleteScaffolding}
               onBack={() => setSelectedVideo(null)}
+              onReorder={handleReorderScaffoldings}
             />
           )}
         </div>
@@ -392,113 +556,142 @@ const AdminVideos = () => {
 
       {/* Prompt Engineering Tab */}
       {activeTab === 'prompts' && (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
-            <button
-              onClick={() => {
-                setEditingPrompt(null)
-                setShowPromptForm(true)
-              }}
-              className="btn btn-primary"
-            >
-              프롬프트 추가
-            </button>
-          </div>
-          
-          {showPromptForm ? (
-            <PromptForm
-              prompt={editingPrompt}
-              onSave={handleSavePrompt}
-              onCancel={() => {
-                setShowPromptForm(false)
-                setEditingPrompt(null)
-              }}
-            />
-          ) : (
-            <div style={{ display: 'grid', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', height: 'calc(100vh - 200px)' }}>
+          {/* Left Panel - Prompt List */}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3>프롬프트 목록</h3>
+              <button
+                onClick={() => {
+                  setEditingPrompt(null)
+                  setShowPromptForm(true)
+                }}
+                className="btn btn-primary"
+              >
+                프롬프트 추가
+              </button>
+            </div>
+            
+            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gap: '15px' }}>
               {prompts.map((prompt) => (
-                <div key={prompt.id} className="card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '15px' }}>
-                    <div style={{ flex: 1 }}>
-                      <h3>
-                        {prompt.name}
-                        {prompt.is_default && (
-                          <span style={{
-                            marginLeft: '10px',
-                            padding: '4px 8px',
-                            backgroundColor: '#4CAF50',
-                            color: 'white',
-                            borderRadius: '3px',
-                            fontSize: '12px'
-                          }}>
-                            기본
-                          </span>
-                        )}
-                        {!prompt.is_active && (
-                          <span style={{
-                            marginLeft: '10px',
-                            padding: '4px 8px',
-                            backgroundColor: '#f44336',
-                            color: 'white',
-                            borderRadius: '3px',
-                            fontSize: '12px'
-                          }}>
-                            비활성
-                          </span>
-                        )}
-                      </h3>
-                      <p style={{ color: '#666', margin: '5px 0' }}>{prompt.description}</p>
-                      <p style={{ fontSize: '14px', color: '#666' }}>
-                        버전: {prompt.version} | 
-                        {prompt.video_id && ` 비디오 ID: ${prompt.video_id} |`}
-                        {prompt.user_role && ` 권한: ${prompt.user_role}`}
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button
-                        onClick={() => handleTogglePromptActive(prompt.id, prompt.is_active)}
-                        className="btn btn-secondary"
-                      >
-                        {prompt.is_active ? '비활성화' : '활성화'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingPrompt(prompt)
-                          setShowPromptForm(true)
-                        }}
-                        className="btn btn-secondary"
-                      >
-                        수정
-                      </button>
-                      <button
-                        onClick={() => handleDeletePrompt(prompt.id)}
-                        className="btn btn-danger"
-                      >
-                        삭제
-                      </button>
-                    </div>
+                <div 
+                  key={prompt.id} 
+                  className="card"
+                  style={{ 
+                    cursor: 'pointer',
+                    border: editingPrompt?.id === prompt.id ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onClick={() => {
+                    setEditingPrompt(prompt)
+                    setShowPromptForm(true)
+                  }}
+                >
+                  <div style={{ marginBottom: '10px' }}>
+                    <h4 style={{ margin: '0 0 5px 0', fontSize: '16px' }}>
+                      {prompt.name}
+                      {prompt.is_default && (
+                        <span style={{
+                          marginLeft: '8px',
+                          padding: '2px 6px',
+                          backgroundColor: '#4CAF50',
+                          color: 'white',
+                          borderRadius: '3px',
+                          fontSize: '11px'
+                        }}>
+                          기본
+                        </span>
+                      )}
+                      {!prompt.is_active && (
+                        <span style={{
+                          marginLeft: '8px',
+                          padding: '2px 6px',
+                          backgroundColor: '#f44336',
+                          color: 'white',
+                          borderRadius: '3px',
+                          fontSize: '11px'
+                        }}>
+                          비활성
+                        </span>
+                      )}
+                    </h4>
+                    <p style={{ color: '#666', margin: '0 0 8px 0', fontSize: '14px' }}>{prompt.description}</p>
+                    <p style={{ fontSize: '12px', color: '#999', margin: '0' }}>
+                      버전: {prompt.version} | 
+                      {prompt.video_id && ` 비디오 ID: ${prompt.video_id} |`}
+                      {prompt.user_role && ` 권한: ${prompt.user_role}`}
+                    </p>
                   </div>
                   
-                  <div style={{ marginTop: '15px' }}>
-                    <h4 style={{ marginBottom: '10px', fontSize: '14px' }}>시스템 프롬프트:</h4>
-                    <div style={{
-                      backgroundColor: '#f5f5f5',
-                      padding: '15px',
-                      borderRadius: '5px',
-                      whiteSpace: 'pre-wrap',
-                      fontSize: '14px',
-                      fontFamily: 'monospace',
-                      maxHeight: '200px',
-                      overflow: 'auto'
-                    }}>
-                      {prompt.system_prompt}
-                    </div>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleTogglePromptActive(prompt.id, prompt.is_active)
+                      }}
+                      className="btn btn-secondary"
+                      style={{ fontSize: '12px', padding: '4px 8px' }}
+                    >
+                      {prompt.is_active ? '비활성화' : '활성화'}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeletePrompt(prompt.id)
+                      }}
+                      className="btn btn-danger"
+                      style={{ fontSize: '12px', padding: '4px 8px' }}
+                    >
+                      삭제
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
-          )}
-        </>
+          </div>
+          
+          {/* Right Panel - Prompt Form */}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3>{editingPrompt ? '프롬프트 수정' : '프롬프트 추가'}</h3>
+              {showPromptForm && (
+                <button
+                  onClick={() => {
+                    setShowPromptForm(false)
+                    setEditingPrompt(null)
+                  }}
+                  className="btn btn-secondary"
+                >
+                  닫기
+                </button>
+              )}
+            </div>
+            
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {showPromptForm ? (
+                <PromptForm
+                  prompt={editingPrompt}
+                  onSave={handleSavePrompt}
+                  onCancel={() => {
+                    setShowPromptForm(false)
+                    setEditingPrompt(null)
+                  }}
+                />
+              ) : (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  height: '100%',
+                  color: '#666',
+                  fontSize: '16px'
+                }}>
+                  프롬프트를 선택하거나 추가 버튼을 클릭하세요
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -656,9 +849,52 @@ const VideoForm = ({ video, onSave, onCancel }) => {
   )
 }
 
-const ScaffoldingManager = ({ video, scaffoldings, onSave, onDelete, onBack }) => {
+const ScaffoldingManager = ({ video, scaffoldings, onSave, onDelete, onBack, onReorder }) => {
   const [editing, setEditing] = useState(null)
   const [showForm, setShowForm] = useState(false)
+  const [localScaffoldings, setLocalScaffoldings] = useState(scaffoldings)
+  const [activeId, setActiveId] = useState(null)
+
+  // scaffoldings가 변경될 때 로컬 상태 업데이트
+  useEffect(() => {
+    setLocalScaffoldings(scaffoldings)
+  }, [scaffoldings])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragStart = (event) => {
+    setActiveId(event.active.id)
+  }
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+    setActiveId(null)
+
+    if (active.id !== over.id) {
+      const oldIndex = localScaffoldings.findIndex(item => item.id === active.id)
+      const newIndex = localScaffoldings.findIndex(item => item.id === over.id)
+      
+      const newScaffoldings = arrayMove(localScaffoldings, oldIndex, newIndex)
+      setLocalScaffoldings(newScaffoldings)
+      
+      // 순서 재정렬 API 호출
+      const reorderData = newScaffoldings.map((item, index) => ({
+        id: item.id,
+        order_index: index + 1
+      }))
+      
+      onReorder(reorderData)
+    }
+  }
 
   return (
     <div>
@@ -697,46 +933,39 @@ const ScaffoldingManager = ({ video, scaffoldings, onSave, onDelete, onBack }) =
           />
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '15px' }}>
-          {scaffoldings.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-              아직 등록된 학습질문이 없습니다
-            </div>
-          ) : (
-            scaffoldings.map((scaffolding, index) => (
-              <div key={scaffolding.id} className="card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                  <div style={{ flex: 1 }}>
-                    <h4>질문 {index + 1}: {scaffolding.title}</h4>
-                    <p style={{ color: '#666', marginTop: '10px', whiteSpace: 'pre-wrap' }}>
-                      {scaffolding.prompt_text}
-                    </p>
-                    <p style={{ fontSize: '14px', color: '#999', marginTop: '5px' }}>
-                      순서: {scaffolding.order_index}
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button
-                      onClick={() => {
-                        setEditing(scaffolding)
-                        setShowForm(true)
-                      }}
-                      className="btn btn-secondary"
-                    >
-                      수정
-                    </button>
-                    <button
-                      onClick={() => onDelete(scaffolding.id)}
-                      className="btn btn-danger"
-                    >
-                      삭제
-                    </button>
-                  </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={localScaffoldings.map(item => item.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div style={{ display: 'grid', gap: '15px' }}>
+              {localScaffoldings.length === 0 ? (
+                <div className="card" style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                  아직 등록된 학습질문이 없습니다
                 </div>
-              </div>
-            ))
-          )}
-        </div>
+              ) : (
+                 localScaffoldings.map((scaffolding, index) => (
+                   <SortableScaffoldingItem
+                     key={scaffolding.id}
+                     scaffolding={scaffolding}
+                     index={index}
+                     isActive={activeId === scaffolding.id}
+                     onEdit={(scaffolding) => {
+                       setEditing(scaffolding)
+                       setShowForm(true)
+                     }}
+                     onDelete={onDelete}
+                   />
+                 ))
+              )}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   )
@@ -745,8 +974,7 @@ const ScaffoldingManager = ({ video, scaffoldings, onSave, onDelete, onBack }) =
 const ScaffoldingForm = ({ scaffolding, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     title: scaffolding?.title || '',
-    prompt_text: scaffolding?.prompt_text || '',
-    order_index: scaffolding?.order_index || 0
+    prompt_text: scaffolding?.prompt_text || ''
   })
 
   const handleSubmit = (e) => {
@@ -761,7 +989,7 @@ const ScaffoldingForm = ({ scaffolding, onSave, onCancel }) => {
   return (
     <form onSubmit={handleSubmit}>
       <div className="form-group">
-        <label className="form-label">질문 제목</label>
+        <label className="form-label">질문 제목 (관리자용)</label>
         <input
           type="text"
           className="form-input"
@@ -773,7 +1001,7 @@ const ScaffoldingForm = ({ scaffolding, onSave, onCancel }) => {
       </div>
       
       <div className="form-group">
-        <label className="form-label">질문 내용</label>
+        <label className="form-label">질문 내용 (학습자에게 표시)</label>
         <textarea
           className="form-textarea"
           value={formData.prompt_text}
@@ -781,17 +1009,6 @@ const ScaffoldingForm = ({ scaffolding, onSave, onCancel }) => {
           placeholder="학습자가 답변할 질문을 입력하세요"
           rows="5"
           required
-        />
-      </div>
-      
-      <div className="form-group">
-        <label className="form-label">순서</label>
-        <input
-          type="number"
-          className="form-input"
-          value={formData.order_index}
-          onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) })}
-          min="0"
         />
       </div>
       

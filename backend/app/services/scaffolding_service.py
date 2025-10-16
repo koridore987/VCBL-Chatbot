@@ -16,7 +16,7 @@ class ScaffoldingService:
     
     @staticmethod
     def create_scaffolding(video_id: int, title: str, prompt_text: str, 
-                          order_index: int = 0) -> Tuple[Optional[Scaffolding], Optional[str]]:
+                          order_index: Optional[int] = None) -> Tuple[Optional[Scaffolding], Optional[str]]:
         """
         스캐폴딩 생성
         
@@ -24,12 +24,26 @@ class ScaffoldingService:
             video_id: 비디오 ID
             title: 제목
             prompt_text: 프롬프트 텍스트
-            order_index: 정렬 순서
+            order_index: 정렬 순서 (None이면 자동으로 마지막 순서 + 1)
             
         Returns:
             (scaffolding, error): 성공 시 스캐폴딩 객체, 실패 시 None과 에러 메시지
         """
         try:
+            # order_index가 지정되지 않으면 자동으로 마지막 순서 + 1
+            if order_index is None:
+                last_scaffolding = Scaffolding.query.filter_by(video_id=video_id)\
+                    .order_by(Scaffolding.order_index.desc()).first()
+                order_index = (last_scaffolding.order_index + 1) if last_scaffolding else 1
+            
+            # 중복 순서 방지: 같은 순서가 있으면 그 이후의 모든 질문을 +1씩 밀어냄
+            existing = Scaffolding.query.filter_by(video_id=video_id, order_index=order_index).first()
+            if existing:
+                Scaffolding.query.filter(
+                    Scaffolding.video_id == video_id,
+                    Scaffolding.order_index >= order_index
+                ).update({Scaffolding.order_index: Scaffolding.order_index + 1})
+            
             scaffolding = Scaffolding(
                 video_id=video_id,
                 title=title,
@@ -40,7 +54,7 @@ class ScaffoldingService:
             db.session.add(scaffolding)
             db.session.commit()
             
-            logger.info(f"Scaffolding created: {scaffolding.id} for video {video_id}")
+            logger.info(f"Scaffolding created: {scaffolding.id} for video {video_id} with order {order_index}")
             return scaffolding, None
             
         except Exception as e:
@@ -221,3 +235,44 @@ class ScaffoldingService:
             db.session.rollback()
             logger.error(f"Save bulk scaffolding responses error: {str(e)}")
             return False, '응답 저장 중 오류가 발생했습니다'
+    
+    @staticmethod
+    def reorder_scaffoldings(video_id: int, reorder_data: list) -> Tuple[bool, Optional[str]]:
+        """
+        스캐폴딩 순서 재정렬
+        
+        Args:
+            video_id: 비디오 ID
+            reorder_data: 순서 변경 데이터 [{'id': int, 'order_index': int}, ...]
+            
+        Returns:
+            (success, error): 성공 여부와 에러 메시지
+        """
+        try:
+            # 모든 스캐폴딩이 해당 비디오에 속하는지 확인
+            scaffolding_ids = [item['id'] for item in reorder_data]
+            scaffoldings = Scaffolding.query.filter(
+                Scaffolding.id.in_(scaffolding_ids),
+                Scaffolding.video_id == video_id
+            ).all()
+            
+            if len(scaffoldings) != len(scaffolding_ids):
+                return False, '일부 스캐폴딩을 찾을 수 없습니다'
+            
+            # 순서 업데이트
+            for item in reorder_data:
+                scaffolding_id = item['id']
+                new_order = item['order_index']
+                
+                scaffolding = next((s for s in scaffoldings if s.id == scaffolding_id), None)
+                if scaffolding:
+                    scaffolding.order_index = new_order
+            
+            db.session.commit()
+            logger.info(f"Scaffoldings reordered for video {video_id}")
+            return True, None
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Reorder scaffoldings error: {str(e)}")
+            return False, '순서 변경 중 오류가 발생했습니다'

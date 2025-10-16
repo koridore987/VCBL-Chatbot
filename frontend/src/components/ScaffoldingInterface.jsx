@@ -151,14 +151,13 @@ const ScaffoldingInterface = ({ video, onResponseSaved }) => {
             transition={{ duration: 0.3 }}
             className="space-y-4"
           >
-            {/* Question Title */}
+            {/* Question Number */}
             <div>
-              <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center space-x-2">
+              <div className="flex items-center space-x-2 mb-3">
                 <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-500 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-md">
                   {activeIndex + 1}
                 </div>
-                <span>{currentScaffolding.title}</span>
-              </h3>
+              </div>
             </div>
             
             {/* Question Prompt - only show if prompt_text is not empty */}

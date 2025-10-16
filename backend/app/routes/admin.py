@@ -20,6 +20,7 @@ from app.validators import (
     CreateScaffoldingRequest, UpdateScaffoldingRequest,
     CreatePromptRequest, UpdatePromptRequest
 )
+from app.validators.scaffolding_schemas import ReorderScaffoldingsRequest
 import logging
 import csv
 import io
@@ -299,6 +300,21 @@ def delete_scaffolding(current_user, scaffolding_id):
         return error_response(error, 404 if '찾을 수 없' in error else 400)
     
     return success_response({'message': '스캐폴딩이 삭제되었습니다'})
+
+
+@admin_bp.route('/videos/<int:video_id>/scaffoldings/reorder', methods=['PUT'])
+@admin_required
+@validate_request(ReorderScaffoldingsRequest)
+def reorder_scaffoldings(current_user, video_id, *, validated_data: ReorderScaffoldingsRequest):
+    """스캐폴딩 순서 재정렬"""
+    reorder_data = [{'id': item.id, 'order_index': item.order_index} for item in validated_data.scaffoldings]
+    
+    success, error = ScaffoldingService.reorder_scaffoldings(video_id, reorder_data)
+    
+    if error:
+        return error_response(error, 400)
+    
+    return success_response({'message': '순서가 변경되었습니다'})
 
 
 # ==================== 프롬프트 관리 ====================
