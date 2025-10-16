@@ -1,6 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
+
+# Ensure script is executable and has proper line endings
+# This helps with cross-platform compatibility
 
 # Ensure we are in backend directory
 cd /app/backend
@@ -20,5 +23,3 @@ fi
 
 echo "Starting Supervisor (nginx + gunicorn)"
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
-
-

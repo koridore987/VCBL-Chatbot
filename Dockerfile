@@ -60,6 +60,7 @@ RUN apt-get update && apt-get install -y \
     libpq5 \
     supervisor \
     curl \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python packages from builder
@@ -69,9 +70,14 @@ COPY --from=backend-builder /usr/local/bin /usr/local/bin
 # Copy backend application
 COPY backend/ ./backend/
 
-# Copy entrypoint script
+# Copy entrypoint script and ensure proper permissions (platform-independent)
 COPY backend/entrypoint.sh /app/backend/entrypoint.sh
-RUN chmod +x /app/backend/entrypoint.sh
+RUN chmod +x /app/backend/entrypoint.sh && \
+    # Convert Windows line endings to Unix line endings
+    sed -i 's/\r$//' /app/backend/entrypoint.sh && \
+    # Ensure the script has proper Unix line endings
+    dos2unix /app/backend/entrypoint.sh 2>/dev/null || true && \
+    ls -la /app/backend/entrypoint.sh
 
 # Copy frontend build output to Nginx directory
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
@@ -117,4 +123,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:${PORT}/health || exit 1
 
 # Start via entrypoint which runs migrations then supervisor (nginx + gunicorn)
-CMD ["/app/backend/entrypoint.sh"]
+# Use shell execution to avoid permission issues across platforms
+ENTRYPOINT ["/bin/sh", "/app/backend/entrypoint.sh"]
