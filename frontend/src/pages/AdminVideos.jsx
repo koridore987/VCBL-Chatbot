@@ -290,8 +290,10 @@ const AdminVideos = () => {
                           <option value="none">없음</option>
                           <option value="prompt">질문만</option>
                           <option value="chat">채팅만</option>
-                          <option value="both">둘 다</option>
                         </select>
+                        <small style={{ color: '#666', fontSize: '12px', marginLeft: '8px', display: 'block', marginTop: '4px' }}>
+                          하나의 모드만 선택 가능합니다
+                        </small>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -577,8 +579,10 @@ const VideoForm = ({ video, onSave, onCancel }) => {
             <option value="none">없음</option>
             <option value="prompt">질문만</option>
             <option value="chat">채팅만</option>
-            <option value="both">둘 다</option>
           </select>
+          <small style={{ color: '#666', fontSize: '13px', marginTop: '5px', display: 'block' }}>
+            하나의 모드만 선택 가능합니다. 질문만 또는 채팅만 중 하나를 선택하세요.
+          </small>
         </div>
         
         <div className="form-group">

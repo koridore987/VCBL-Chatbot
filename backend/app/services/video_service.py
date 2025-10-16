@@ -154,7 +154,7 @@ class VideoService:
                 description=kwargs.get('description'),
                 duration=kwargs.get('duration'),
                 thumbnail_url=thumbnail_url,
-                scaffolding_mode=kwargs.get('scaffolding_mode', 'both'),
+                scaffolding_mode=kwargs.get('scaffolding_mode', 'none'),
                 order_index=kwargs.get('order_index', 0),
                 survey_url=kwargs.get('survey_url'),
                 intro_text=kwargs.get('intro_text')
@@ -188,6 +188,12 @@ class VideoService:
             
             if not video:
                 return None, '비디오를 찾을 수 없습니다'
+            
+            # scaffolding_mode 검증
+            if 'scaffolding_mode' in kwargs:
+                valid_modes = ['none', 'prompt', 'chat']
+                if kwargs['scaffolding_mode'] not in valid_modes:
+                    return None, f'유효하지 않은 학습 모드입니다. 허용된 값: {", ".join(valid_modes)}'
             
             # 업데이트 가능한 필드
             allowed_fields = ['title', 'description', 'scaffolding_mode', 'is_active', 'learning_enabled', 'order_index', 'survey_url', 'intro_text']

@@ -13,7 +13,7 @@ class Video(db.Model):
     thumbnail_url = db.Column(db.String(500))
     
     # Scaffolding settings
-    scaffolding_mode = db.Column(db.String(20), default='both')  # 'prompt', 'chat', 'both', 'none'
+    scaffolding_mode = db.Column(db.String(20), default='none')  # 'prompt', 'chat', 'none'
     is_active = db.Column(db.Boolean, default=True)
     learning_enabled = db.Column(db.Boolean, default=False)  # 관리자가 열기 전까지 비활성화
     order_index = db.Column(db.Integer, default=0)

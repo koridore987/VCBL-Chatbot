@@ -54,7 +54,7 @@ def upgrade():
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('duration', sa.Integer(), nullable=True),
     sa.Column('thumbnail_url', sa.String(length=500), nullable=True),
-    sa.Column('scaffolding_mode', sa.String(length=20), nullable=True),
+    sa.Column('scaffolding_mode', sa.String(length=20), nullable=True, server_default='none'),
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('learning_enabled', sa.Boolean(), nullable=True),
     sa.Column('order_index', sa.Integer(), nullable=True),
@@ -62,7 +62,8 @@ def upgrade():
     sa.Column('intro_text', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.CheckConstraint("scaffolding_mode IN ('none', 'prompt', 'chat')", name='ck_videos_scaffolding_mode')
     )
     op.create_table('chat_prompt_templates',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -225,6 +226,8 @@ def downgrade():
 
     op.drop_table('chat_sessions')
     op.drop_table('chat_prompt_templates')
+    with op.batch_alter_table('videos', schema=None) as batch_op:
+        batch_op.drop_constraint('ck_videos_scaffolding_mode', type_='check')
     op.drop_table('videos')
     with op.batch_alter_table('users', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_users_student_id'))

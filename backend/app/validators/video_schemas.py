@@ -13,7 +13,7 @@ class CreateVideoRequest(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     duration: Optional[int] = Field(None, ge=0)
     thumbnail_url: Optional[str] = Field(None, max_length=500)
-    scaffolding_mode: str = Field(default='both', pattern='^(none|prompt|chat|both)$')
+    scaffolding_mode: str = Field(default='none', pattern='^(none|prompt|chat)$')
     order_index: int = Field(default=0, ge=0)
     survey_url: Optional[str] = Field(None, max_length=500)
     intro_text: Optional[str] = Field(None, max_length=5000)
@@ -30,7 +30,7 @@ class UpdateVideoRequest(BaseModel):
     """비디오 업데이트 요청 검증"""
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=2000)
-    scaffolding_mode: Optional[str] = Field(None, pattern='^(none|prompt|chat|both)$')
+    scaffolding_mode: Optional[str] = Field(None, pattern='^(none|prompt|chat)$')
     is_active: Optional[bool] = None
     learning_enabled: Optional[bool] = None
     order_index: Optional[int] = Field(None, ge=0)
