@@ -11,7 +11,8 @@ import {
   HiUser,
   HiMenuAlt3,
   HiX,
-  HiSparkles
+  HiSparkles,
+  HiChatAlt2
 } from 'react-icons/hi'
 import { useState } from 'react'
 
@@ -122,6 +123,17 @@ const Navbar = () => {
                     >
                       <HiVideoCamera className="text-lg" />
                       <span className="font-medium">콘텐츠 관리</span>
+                    </Link>
+                    <Link 
+                      to="/admin/personas" 
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+                        isActiveLink('/admin/personas') 
+                          ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
+                          : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'
+                      }`}
+                    >
+                      <HiChatAlt2 className="text-lg" />
+                      <span className="font-medium">챗봇 관리</span>
                     </Link>
                     <Link 
                       to="/admin/logs" 
@@ -235,6 +247,18 @@ const Navbar = () => {
                       >
                         <HiVideoCamera className="text-xl" />
                         <span className="font-medium">콘텐츠 관리</span>
+                      </Link>
+                      <Link 
+                        to="/admin/personas" 
+                        className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
+                          isActiveLink('/admin/personas') 
+                            ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
+                            : 'text-gray-700 hover:bg-primary-50'
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <HiChatAlt2 className="text-xl" />
+                        <span className="font-medium">챗봇 관리</span>
                       </Link>
                       <Link 
                         to="/admin/logs" 
