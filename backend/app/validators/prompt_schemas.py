@@ -1,19 +1,17 @@
 """
-프롬프트 템플릿 관련 검증 스키마
+챗봇 페르소나 관련 검증 스키마
 """
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional
+from typing import Optional, Dict, Any
+import json
 
 
-class CreatePromptRequest(BaseModel):
-    """프롬프트 생성 요청 검증"""
+class CreatePersonaRequest(BaseModel):
+    """페르소나 생성 요청 검증"""
     name: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=500)
     system_prompt: str = Field(..., min_length=1, max_length=5000)
-    constraints: Optional[str] = Field(None, max_length=2000)
-    video_id: Optional[int] = Field(None, gt=0)
-    user_role: Optional[str] = Field(None, pattern='^(user|admin|super)$')
-    is_default: bool = Field(default=False)
+    constraints: Optional[Dict[str, Any]] = Field(None, description="OpenAI API 파라미터")
     
     @field_validator('name', 'system_prompt')
     @classmethod
@@ -22,7 +20,7 @@ class CreatePromptRequest(BaseModel):
             return v.strip()
         return v
     
-    @field_validator('description', 'constraints', 'user_role')
+    @field_validator('description')
     @classmethod
     def empty_string_to_none(cls, v):
         """빈 문자열을 None으로 변환"""
@@ -30,25 +28,34 @@ class CreatePromptRequest(BaseModel):
             return None
         return v.strip() if isinstance(v, str) else v
     
-    @field_validator('video_id', mode='before')
+    @field_validator('constraints', mode='before')
     @classmethod
-    def empty_video_id_to_none(cls, v):
-        """빈 문자열이나 빈 값을 None으로 변환"""
-        if v == '' or v is None:
+    def validate_constraints(cls, v):
+        """constraints를 딕셔너리로 변환"""
+        if v is None or v == '':
             return None
+        
+        # 이미 딕셔너리인 경우
+        if isinstance(v, dict):
+            return v
+        
+        # 문자열인 경우 JSON 파싱
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                raise ValueError('constraints는 유효한 JSON 형식이어야 합니다')
+        
         return v
 
 
-class UpdatePromptRequest(BaseModel):
-    """프롬프트 업데이트 요청 검증"""
+class UpdatePersonaRequest(BaseModel):
+    """페르소나 업데이트 요청 검증"""
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=500)
     system_prompt: Optional[str] = Field(None, min_length=1, max_length=5000)
-    constraints: Optional[str] = Field(None, max_length=2000)
-    video_id: Optional[int] = Field(None, gt=0)
-    user_role: Optional[str] = Field(None, pattern='^(user|admin|super)$')
+    constraints: Optional[Dict[str, Any]] = Field(None, description="OpenAI API 파라미터")
     is_active: Optional[bool] = None
-    is_default: Optional[bool] = None
     
     @field_validator('name', 'system_prompt')
     @classmethod
@@ -57,7 +64,7 @@ class UpdatePromptRequest(BaseModel):
             return v.strip()
         return v
     
-    @field_validator('description', 'constraints', 'user_role')
+    @field_validator('description')
     @classmethod
     def empty_string_to_none(cls, v):
         """빈 문자열을 None으로 변환"""
@@ -65,11 +72,39 @@ class UpdatePromptRequest(BaseModel):
             return None
         return v.strip() if isinstance(v, str) else v
     
-    @field_validator('video_id', mode='before')
+    @field_validator('constraints', mode='before')
     @classmethod
-    def empty_video_id_to_none(cls, v):
-        """빈 문자열이나 빈 값을 None으로 변환"""
-        if v == '' or v is None:
+    def validate_constraints(cls, v):
+        """constraints를 딕셔너리로 변환"""
+        if v is None or v == '':
             return None
+        
+        # 이미 딕셔너리인 경우
+        if isinstance(v, dict):
+            return v
+        
+        # 문자열인 경우 JSON 파싱
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                raise ValueError('constraints는 유효한 JSON 형식이어야 합니다')
+        
         return v
+
+
+class TestChatRequest(BaseModel):
+    """페르소나 테스트 채팅 요청 검증"""
+    message: str = Field(..., min_length=1, max_length=2000)
+    persona_id: int = Field(..., gt=0)
+    
+    @field_validator('message')
+    @classmethod
+    def validate_message(cls, v):
+        return v.strip() if v else v
+
+
+# 하위 호환성을 위한 별칭
+CreatePromptRequest = CreatePersonaRequest
+UpdatePromptRequest = UpdatePersonaRequest
 
