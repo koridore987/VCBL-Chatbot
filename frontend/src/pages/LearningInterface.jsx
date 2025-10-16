@@ -304,6 +304,7 @@ const LearningInterface = () => {
 
   const showScaffolding = video.scaffolding_mode === 'prompt' || video.scaffolding_mode === 'both'
   const showChat = video.scaffolding_mode === 'chat' || video.scaffolding_mode === 'both'
+  const hasRightPanel = showScaffolding || showChat
 
   const totalSteps = 3
   
@@ -426,9 +427,9 @@ const LearningInterface = () => {
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.4 }}
-        className="w-full lg:flex-[2] p-4 sm:p-6 overflow-auto"
+        className={`w-full p-4 sm:p-6 overflow-auto ${hasRightPanel && currentStep === 2 ? 'lg:flex-[2]' : ''}`}
       >
-        <div className="max-w-4xl mx-auto space-y-4">
+        <div className={`mx-auto space-y-4 ${hasRightPanel && currentStep === 2 ? 'max-w-4xl' : 'max-w-6xl'}`}>
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -699,7 +700,7 @@ const LearningInterface = () => {
         </div>
       </motion.div>
       
-      {currentStep === 2 && (
+      {currentStep === 2 && hasRightPanel && (
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
