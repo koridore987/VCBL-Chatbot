@@ -3,6 +3,10 @@ from datetime import datetime
 import json
 
 class ChatPromptTemplate(db.Model):
+    """
+    챗봇 페르소나 모델
+    전역 활성화를 통해 한 번에 하나의 페르소나만 활성화 가능
+    """
     __tablename__ = 'chat_prompt_templates'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -14,7 +18,7 @@ class ChatPromptTemplate(db.Model):
     constraints = db.Column(db.Text)  # JSON format for OpenAI API parameters
     
     # Global activation (only one can be active at a time)
-    is_global_active = db.Column(db.Boolean, default=False)
+    is_global_active = db.Column(db.Boolean, default=False, index=True)
     
     # Version management
     version = db.Column(db.Integer, default=1)
