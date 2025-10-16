@@ -19,7 +19,90 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { motion, AnimatePresence } from 'framer-motion'
 import api from '../services/api'
+
+// 재사용 가능한 2-Column 레이아웃 컴포넌트
+const TwoColumnLayout = ({ 
+  leftPanel, 
+  rightPanel, 
+  showRightPanel, 
+  onCloseRightPanel,
+  rightPanelTitle,
+  rightPanelContent 
+}) => {
+  return (
+    <div style={{ 
+      display: 'flex', 
+      gap: '20px', 
+      height: '80vh',
+      minHeight: '600px',
+      maxHeight: '800px'
+    }}>
+      {/* Left Panel */}
+      <div style={{ 
+        flex: showRightPanel ? '0 0 40%' : '1', 
+        display: 'flex', 
+        flexDirection: 'column',
+        borderRight: showRightPanel ? '1px solid #e5e7eb' : 'none',
+        paddingRight: showRightPanel ? '20px' : '0',
+        transition: 'all 0.4s ease-in-out'
+      }}>
+        {leftPanel}
+      </div>
+      
+      {/* Right Panel */}
+      <AnimatePresence>
+        {showRightPanel && (
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 50 }}
+            transition={{ 
+              duration: 0.4, 
+              ease: "easeInOut"
+            }}
+            style={{ 
+              flex: '0 0 60%', 
+              display: 'flex', 
+              flexDirection: 'column',
+              paddingLeft: '20px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              backgroundColor: '#fafafa',
+              overflow: 'hidden'
+            }}
+          >
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              marginBottom: '20px',
+              padding: '20px 20px 0 20px'
+            }}>
+              <h3>{rightPanelTitle}</h3>
+              <button
+                onClick={onCloseRightPanel}
+                className="btn btn-secondary"
+                style={{ fontSize: '14px', padding: '8px 16px' }}
+              >
+                닫기
+              </button>
+            </div>
+            
+            <div style={{ 
+              flex: 1, 
+              overflowY: 'auto',
+              padding: '0 20px 20px 20px'
+            }}>
+              {rightPanelContent}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
 
 // 드롭 인디케이터 컴포넌트
 const DropIndicator = ({ isVisible }) => (
@@ -60,7 +143,7 @@ const DragHandle = () => (
 )
 
 // 정렬 가능한 질문 아이템 컴포넌트
-const SortableScaffoldingItem = ({ scaffolding, index, isActive, onEdit, onDelete }) => {
+const SortableScaffoldingItem = ({ scaffolding, index, isActive, isSelected, onEdit, onDelete }) => {
   const {
     attributes,
     listeners,
@@ -86,7 +169,12 @@ const SortableScaffoldingItem = ({ scaffolding, index, isActive, onEdit, onDelet
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        border: isSelected ? '2px solid #3b82f6' : style.border,
+        backgroundColor: isSelected ? '#f0f9ff' : style.backgroundColor,
+        boxShadow: isSelected ? '0 4px 12px rgba(59, 130, 246, 0.15)' : style.boxShadow
+      }}
       className="card"
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '60px' }}>
@@ -556,142 +644,125 @@ const AdminVideos = () => {
 
       {/* Prompt Engineering Tab */}
       {activeTab === 'prompts' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', height: 'calc(100vh - 200px)' }}>
-          {/* Left Panel - Prompt List */}
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3>프롬프트 목록</h3>
-              <button
-                onClick={() => {
-                  setEditingPrompt(null)
-                  setShowPromptForm(true)
-                }}
-                className="btn btn-primary"
-              >
-                프롬프트 추가
-              </button>
-            </div>
-            
-            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gap: '15px' }}>
-              {prompts.map((prompt) => (
-                <div 
-                  key={prompt.id} 
-                  className="card"
-                  style={{ 
-                    cursor: 'pointer',
-                    border: editingPrompt?.id === prompt.id ? '2px solid #3b82f6' : '1px solid #e5e7eb',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onClick={() => {
-                    setEditingPrompt(prompt)
-                    setShowPromptForm(true)
-                  }}
-                >
-                  <div style={{ marginBottom: '10px' }}>
-                    <h4 style={{ margin: '0 0 5px 0', fontSize: '16px' }}>
-                      {prompt.name}
-                      {prompt.is_default && (
-                        <span style={{
-                          marginLeft: '8px',
-                          padding: '2px 6px',
-                          backgroundColor: '#4CAF50',
-                          color: 'white',
-                          borderRadius: '3px',
-                          fontSize: '11px'
-                        }}>
-                          기본
-                        </span>
-                      )}
-                      {!prompt.is_active && (
-                        <span style={{
-                          marginLeft: '8px',
-                          padding: '2px 6px',
-                          backgroundColor: '#f44336',
-                          color: 'white',
-                          borderRadius: '3px',
-                          fontSize: '11px'
-                        }}>
-                          비활성
-                        </span>
-                      )}
-                    </h4>
-                    <p style={{ color: '#666', margin: '0 0 8px 0', fontSize: '14px' }}>{prompt.description}</p>
-                    <p style={{ fontSize: '12px', color: '#999', margin: '0' }}>
-                      버전: {prompt.version} | 
-                      {prompt.video_id && ` 비디오 ID: ${prompt.video_id} |`}
-                      {prompt.user_role && ` 권한: ${prompt.user_role}`}
-                    </p>
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleTogglePromptActive(prompt.id, prompt.is_active)
-                      }}
-                      className="btn btn-secondary"
-                      style={{ fontSize: '12px', padding: '4px 8px' }}
-                    >
-                      {prompt.is_active ? '비활성화' : '활성화'}
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeletePrompt(prompt.id)
-                      }}
-                      className="btn btn-danger"
-                      style={{ fontSize: '12px', padding: '4px 8px' }}
-                    >
-                      삭제
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          {/* Right Panel - Prompt Form */}
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3>{editingPrompt ? '프롬프트 수정' : '프롬프트 추가'}</h3>
-              {showPromptForm && (
+        <TwoColumnLayout
+          leftPanel={
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3>프롬프트 목록</h3>
                 <button
                   onClick={() => {
-                    setShowPromptForm(false)
                     setEditingPrompt(null)
+                    setShowPromptForm(true)
                   }}
-                  className="btn btn-secondary"
+                  className="btn btn-primary"
                 >
-                  닫기
+                  프롬프트 추가
                 </button>
-              )}
-            </div>
-            
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {showPromptForm ? (
-                <PromptForm
-                  prompt={editingPrompt}
-                  onSave={handleSavePrompt}
-                  onCancel={() => {
-                    setShowPromptForm(false)
-                    setEditingPrompt(null)
-                  }}
-                />
-              ) : (
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  height: '100%',
-                  color: '#666',
-                  fontSize: '16px'
-                }}>
-                  프롬프트를 선택하거나 추가 버튼을 클릭하세요
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+              </div>
+              
+              <div style={{ 
+                flex: 1, 
+                overflowY: 'auto', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '15px' 
+              }}>
+                {prompts.map((prompt) => (
+                  <div 
+                    key={prompt.id} 
+                    className="card"
+                    style={{ 
+                      cursor: 'pointer',
+                      border: editingPrompt?.id === prompt.id ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                      backgroundColor: editingPrompt?.id === prompt.id ? '#f0f9ff' : 'white',
+                      boxShadow: editingPrompt?.id === prompt.id ? '0 4px 12px rgba(59, 130, 246, 0.15)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onClick={() => {
+                      setEditingPrompt(prompt)
+                      setShowPromptForm(true)
+                    }}
+                  >
+                    <div style={{ marginBottom: '10px' }}>
+                      <h4 style={{ margin: '0 0 5px 0', fontSize: '16px' }}>
+                        {prompt.name}
+                        {prompt.is_default && (
+                          <span style={{
+                            marginLeft: '8px',
+                            padding: '2px 6px',
+                            backgroundColor: '#4CAF50',
+                            color: 'white',
+                            borderRadius: '3px',
+                            fontSize: '11px'
+                          }}>
+                            기본
+                          </span>
+                        )}
+                        {!prompt.is_active && (
+                          <span style={{
+                            marginLeft: '8px',
+                            padding: '2px 6px',
+                            backgroundColor: '#f44336',
+                            color: 'white',
+                            borderRadius: '3px',
+                            fontSize: '11px'
+                          }}>
+                            비활성
+                          </span>
+                        )}
+                      </h4>
+                      <p style={{ color: '#666', margin: '0 0 8px 0', fontSize: '14px' }}>{prompt.description}</p>
+                      <p style={{ fontSize: '12px', color: '#999', margin: '0' }}>
+                        버전: {prompt.version} | 
+                        {prompt.video_id && ` 비디오 ID: ${prompt.video_id} |`}
+                        {prompt.user_role && ` 권한: ${prompt.user_role}`}
+                      </p>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleTogglePromptActive(prompt.id, prompt.is_active)
+                        }}
+                        className="btn btn-secondary"
+                        style={{ fontSize: '12px', padding: '4px 8px' }}
+                      >
+                        {prompt.is_active ? '비활성화' : '활성화'}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeletePrompt(prompt.id)
+                        }}
+                        className="btn btn-danger"
+                        style={{ fontSize: '12px', padding: '4px 8px' }}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          }
+          showRightPanel={showPromptForm}
+          onCloseRightPanel={() => {
+            setShowPromptForm(false)
+            setEditingPrompt(null)
+          }}
+          rightPanelTitle={editingPrompt ? '프롬프트 수정' : '프롬프트 추가'}
+          rightPanelContent={
+            <PromptForm
+              prompt={editingPrompt}
+              onSave={handleSavePrompt}
+              onCancel={() => {
+                setShowPromptForm(false)
+                setEditingPrompt(null)
+              }}
+            />
+          }
+        />
       )}
     </div>
   )
@@ -896,15 +967,10 @@ const ScaffoldingManager = ({ video, scaffoldings, onSave, onDelete, onBack, onR
     }
   }
 
-  return (
-    <div>
+  const leftPanel = (
+    <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div>
-          <button onClick={onBack} className="btn btn-secondary" style={{ marginBottom: '10px' }}>
-            ← 뒤로가기
-          </button>
-          <h2>{video.title} - 학습질문 관리</h2>
-        </div>
+        <h3>질문 목록</h3>
         <button
           onClick={() => {
             setEditing(null)
@@ -915,10 +981,70 @@ const ScaffoldingManager = ({ video, scaffoldings, onSave, onDelete, onBack, onR
           질문 추가
         </button>
       </div>
+      
+      <div style={{ 
+        flex: 1, 
+        overflowY: 'auto', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '15px' 
+      }}>
+        {localScaffoldings.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+            아직 등록된 학습질문이 없습니다
+          </div>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={localScaffoldings.map(item => item.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {localScaffoldings.map((scaffolding, index) => (
+                <SortableScaffoldingItem
+                  key={scaffolding.id}
+                  scaffolding={scaffolding}
+                  index={index}
+                  isActive={activeId === scaffolding.id}
+                  isSelected={editing?.id === scaffolding.id}
+                  onEdit={(scaffolding) => {
+                    setEditing(scaffolding)
+                    setShowForm(true)
+                  }}
+                  onDelete={onDelete}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+        )}
+      </div>
+    </>
+  )
 
-      {showForm ? (
-        <div className="card">
-          <h3>{editing ? '질문 수정' : '질문 추가'}</h3>
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          <button onClick={onBack} className="btn btn-secondary" style={{ marginBottom: '10px' }}>
+            ← 뒤로가기
+          </button>
+          <h2>{video.title} - 학습질문 관리</h2>
+        </div>
+      </div>
+
+      <TwoColumnLayout
+        leftPanel={leftPanel}
+        showRightPanel={showForm}
+        onCloseRightPanel={() => {
+          setShowForm(false)
+          setEditing(null)
+        }}
+        rightPanelTitle={editing ? '질문 수정' : '질문 추가'}
+        rightPanelContent={
           <ScaffoldingForm
             scaffolding={editing}
             onSave={(data) => {
@@ -931,42 +1057,8 @@ const ScaffoldingManager = ({ video, scaffoldings, onSave, onDelete, onBack, onR
               setEditing(null)
             }}
           />
-        </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={localScaffoldings.map(item => item.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div style={{ display: 'grid', gap: '15px' }}>
-              {localScaffoldings.length === 0 ? (
-                <div className="card" style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                  아직 등록된 학습질문이 없습니다
-                </div>
-              ) : (
-                 localScaffoldings.map((scaffolding, index) => (
-                   <SortableScaffoldingItem
-                     key={scaffolding.id}
-                     scaffolding={scaffolding}
-                     index={index}
-                     isActive={activeId === scaffolding.id}
-                     onEdit={(scaffolding) => {
-                       setEditing(scaffolding)
-                       setShowForm(true)
-                     }}
-                     onDelete={onDelete}
-                   />
-                 ))
-              )}
-            </div>
-          </SortableContext>
-        </DndContext>
-      )}
+        }
+      />
     </div>
   )
 }
