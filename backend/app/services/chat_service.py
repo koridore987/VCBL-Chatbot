@@ -126,14 +126,15 @@ class ChatService:
                 logger.warning(f"Daily token limit exceeded: user={user_id}")
                 return None, '일일 토큰 한도를 초과했습니다'
             
-            # 시스템 프롬프트 가져오기
-            system_prompt = ChatService._get_system_prompt(session.video_id, user.role)
+            # 시스템 프롬프트 및 constraints 가져오기
+            system_prompt, constraints = ChatService._get_system_prompt(session.video_id, user.role)
             
             # OpenAI API 호출
             response_data = openai_service.chat_completion(
                 session=session,
                 user_message=message,
-                system_prompt=system_prompt
+                system_prompt=system_prompt,
+                constraints=constraints
             )
             
             # 사용자 메시지 저장
@@ -187,40 +188,28 @@ class ChatService:
             return None, f'메시지 전송 중 오류가 발생했습니다: {str(e)}'
     
     @staticmethod
-    def _get_system_prompt(video_id: int, user_role: str) -> str:
+    def _get_system_prompt(video_id: int = None, user_role: str = None) -> Tuple[str, dict]:
         """
-        시스템 프롬프트 가져오기
+        시스템 프롬프트 및 constraints 가져오기
         
-        우선순위: 비디오별 프롬프트 > 역할별 프롬프트 > 기본 프롬프트
+        Returns:
+            (system_prompt, constraints): 시스템 프롬프트와 OpenAI API constraints
         """
         try:
-            # 비디오별 프롬프트
+            # 전역 활성화된 페르소나 조회
             prompt_template = ChatPromptTemplate.query.filter_by(
-                video_id=video_id,
+                is_global_active=True,
                 is_active=True
             ).first()
             
-            # 역할별 프롬프트
-            if not prompt_template:
-                prompt_template = ChatPromptTemplate.query.filter_by(
-                    user_role=user_role,
-                    is_active=True
-                ).first()
-            
-            # 기본 프롬프트
-            if not prompt_template:
-                prompt_template = ChatPromptTemplate.query.filter_by(
-                    is_default=True,
-                    is_active=True
-                ).first()
-            
             if prompt_template:
-                return prompt_template.system_prompt
+                return prompt_template.system_prompt, prompt_template.get_constraints_dict()
             
             # 폴백 프롬프트
-            return "당신은 학습을 돕는 AI 조교입니다. 학생들의 질문에 친절하고 명확하게 답변해주세요."
+            logger.warning("No active persona found, using fallback prompt")
+            return "당신은 학습을 돕는 AI 조교입니다. 학생들의 질문에 친절하고 명확하게 답변해주세요.", {}
             
         except Exception as e:
             logger.error(f"Get system prompt error: {str(e)}")
-            return "당신은 학습을 돕는 AI 조교입니다. 학생들의 질문에 친절하고 명확하게 답변해주세요."
+            return "당신은 학습을 돕는 AI 조교입니다. 학생들의 질문에 친절하고 명확하게 답변해주세요.", {}
 

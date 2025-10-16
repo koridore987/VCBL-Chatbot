@@ -36,7 +36,7 @@ class OpenAIService:
         """Count tokens in a text string"""
         return len(self.encoding.encode(text))
     
-    def chat_completion(self, session, user_message, system_prompt):
+    def chat_completion(self, session, user_message, system_prompt, constraints=None):
         """
         채팅 완성 처리 (요약 전달 전략 포함)
         
@@ -44,6 +44,7 @@ class OpenAIService:
             session: 채팅 세션
             user_message: 사용자 메시지
             system_prompt: 시스템 프롬프트
+            constraints: OpenAI API 파라미터 (dict)
             
         Returns:
             dict: 응답 데이터 (content, tokens, cost, new_summary)
@@ -51,6 +52,8 @@ class OpenAIService:
         Raises:
             Exception: API 호출 실패 시
         """
+        if constraints is None:
+            constraints = {}
         try:
             # Get recent messages
             recent_messages = session.messages[-8:] if len(session.messages) > 8 else session.messages
@@ -118,12 +121,28 @@ class OpenAIService:
         for attempt in range(max_retries):
             try:
                 logger.info(f"OpenAI API call attempt {attempt + 1}/{max_retries}")
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=messages,
-                    max_tokens=self.max_tokens_output,
-                    temperature=0.7
-                )
+                
+                # API 파라미터 구성
+                api_params = {
+                    'model': self.model_name,
+                    'messages': messages,
+                    'max_tokens': constraints.get('max_tokens', self.max_tokens_output),
+                    'temperature': constraints.get('temperature', 0.7)
+                }
+                
+                # 추가 constraints 적용
+                if 'top_p' in constraints:
+                    api_params['top_p'] = constraints['top_p']
+                if 'frequency_penalty' in constraints:
+                    api_params['frequency_penalty'] = constraints['frequency_penalty']
+                if 'presence_penalty' in constraints:
+                    api_params['presence_penalty'] = constraints['presence_penalty']
+                if 'stop' in constraints:
+                    api_params['stop'] = constraints['stop']
+                if 'response_format' in constraints:
+                    api_params['response_format'] = constraints['response_format']
+                
+                response = self.client.chat.completions.create(**api_params)
                 break
                 
             except RateLimitError as e:
