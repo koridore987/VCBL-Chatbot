@@ -1,6 +1,11 @@
 import axios from 'axios'
-import { ERROR_MESSAGES } from '../constants'
-import { errorHandler, storage } from '../utils'
+import {
+    ERROR_MESSAGES
+} from '../constants'
+import {
+    errorHandler,
+    storage
+} from '../utils'
 
 const resolveBaseURL = () => {
     try {
@@ -47,7 +52,9 @@ api.interceptors.response.use(
             return Promise.reject(error)
         }
 
-        const { status } = error.response
+        const {
+            status
+        } = error.response
 
         // 상태 코드별 처리
         switch (status) {
@@ -114,7 +121,9 @@ export const getSurvey = async (surveyId) => {
  * 설문 응답 제출
  */
 export const submitSurveyResponses = async (surveyId, responses) => {
-    const response = await api.post(`/surveys/${surveyId}/responses`, { responses })
+    const response = await api.post(`/surveys/${surveyId}/responses`, {
+        responses
+    })
     return response.data
 }
 
@@ -134,7 +143,11 @@ export const getMySurveyResponses = async (surveyId) => {
  * 모든 설문 조회 (관리자)
  */
 export const getAllSurveys = async (activeOnly = false) => {
-    const response = await api.get('/surveys/', { params: { active_only: activeOnly } })
+    const response = await api.get('/surveys/', {
+        params: {
+            active_only: activeOnly
+        }
+    })
     return response.data
 }
 
@@ -190,7 +203,9 @@ export const deleteSurveyQuestion = async (surveyId, questionId) => {
  * 설문 문항 순서 변경 (관리자)
  */
 export const reorderSurveyQuestions = async (surveyId, questionOrders) => {
-    const response = await api.post(`/surveys/${surveyId}/questions/reorder`, { question_orders: questionOrders })
+    const response = await api.post(`/surveys/${surveyId}/questions/reorder`, {
+        question_orders: questionOrders
+    })
     return response.data
 }
 
