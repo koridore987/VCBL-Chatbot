@@ -15,7 +15,7 @@ if __name__ == '__main__':
     try:
         port = int(os.environ.get('PORT', 8080))
         print(f"Starting Flask app on 0.0.0.0:{port}")
-        app.run(host='0.0.0.0', port=port, debug=os.environ.get('FLASK_ENV') == 'development')
+        app.run(host='0.0.0.0', port=port, debug=os.environ.get('FLASK_DEBUG', '0') == '1')
     except Exception as e:
         print(f"Error starting Flask app: {e}")
         import traceback

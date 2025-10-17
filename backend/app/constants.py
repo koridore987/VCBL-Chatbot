@@ -57,13 +57,6 @@ USER_ROLES = {
     'SUPER': 'super',
 }
 
-# Super 관리자 설정
-SUPER_ADMIN_CREDENTIALS = {
-    'STUDENT_ID': 'super',
-    'PASSWORD': 'super1234',
-    'NAME': 'Super Administrator'
-}
-
 # 이벤트 타입
 EVENT_TYPES = {
     'VIDEO_VIEW': 'video_view',
@@ -72,4 +65,3 @@ EVENT_TYPES = {
     'VIDEO_COMPLETE': 'video_complete',
     'SCAFFOLDING_RESPONSE': 'scaffolding_response',
 }
-

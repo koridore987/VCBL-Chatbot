@@ -27,7 +27,7 @@ const VideoCard = ({ video }) => {
 
   return (
     <Link
-      to={`/videos/${video.id}`}
+      to={`/modules/${video.id}`}
       className="group block"
     >
       <div className="glass-card p-0 overflow-hidden transition-all duration-300">

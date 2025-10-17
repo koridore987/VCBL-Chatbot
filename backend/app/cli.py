@@ -154,9 +154,13 @@ def init_admin(student_id, name, password):
             click.echo("Super 관리자는 시스템에 하나만 존재할 수 있습니다.")
             sys.exit(0)
         
-        # 관리자 정보 결정 (우선순위: CLI 옵션 > 환경 변수 > 기본값)
+        # 관리자 정보 결정 (우선순위: CLI 옵션 > 환경 변수)
         # 학번: 10자리 정수, 관리자 규칙상 9999로 시작
-        raw_student_id = student_id or os.getenv('ADMIN_STUDENT_ID') or '9999000001'
+        raw_student_id = student_id or os.getenv('ADMIN_STUDENT_ID')
+        if not raw_student_id:
+            click.echo("❌ 관리자 학번이 설정되지 않았습니다. ADMIN_STUDENT_ID 환경 변수 또는 --student-id 옵션을 사용하세요.")
+            sys.exit(1)
+        
         try:
             admin_student_id = int(raw_student_id)
         except ValueError:
@@ -166,7 +170,10 @@ def init_admin(student_id, name, password):
             click.echo("❌ 관리자 학번은 10자리이며 9999로 시작해야 합니다 (예: 9999000001).")
             sys.exit(1)
 
-        admin_name = name or os.getenv('ADMIN_NAME', 'Super Administrator')
+        admin_name = name or os.getenv('ADMIN_NAME')
+        if not admin_name:
+            click.echo("❌ 관리자 이름이 설정되지 않았습니다. ADMIN_NAME 환경 변수 또는 --name 옵션을 사용하세요.")
+            sys.exit(1)
 
         # 비밀번호: 환경 변수 또는 CLI 옵션으로 명시적으로 제공
         env_password = os.getenv('ADMIN_PASSWORD')
@@ -221,34 +228,28 @@ def seed_admin(ctx):
     
     try:
         # 슈퍼 관리자 계정 생성
-        super_admin = User.query.filter_by(student_id='super').first()
+        super_student_id = os.getenv('ADMIN_STUDENT_ID')
+        super_name = os.getenv('ADMIN_NAME')
+        super_password = os.getenv('ADMIN_PASSWORD')
+        
+        if not all([super_student_id, super_name, super_password]):
+            click.echo("❌ 관리자 환경변수가 설정되지 않았습니다.")
+            click.echo("필요한 환경변수: ADMIN_STUDENT_ID, ADMIN_NAME, ADMIN_PASSWORD")
+            sys.exit(1)
+        
+        super_admin = User.query.filter_by(student_id=super_student_id).first()
         if not super_admin:
             super_admin = User(
-                student_id='super',
-                name='Super Administrator',
+                student_id=int(super_student_id),
+                name=super_name,
                 role='super',
                 is_active=True
             )
-            super_admin.set_password('super1234')
+            super_admin.set_password(super_password)
             db.session.add(super_admin)
             click.echo("✅ 슈퍼 관리자 계정이 생성되었습니다.")
         else:
             click.echo("ℹ️  슈퍼 관리자 계정이 이미 존재합니다.")
-        
-        # 일반 관리자 계정 생성 (선택사항)
-        admin = User.query.filter_by(student_id='admin').first()
-        if not admin:
-            admin = User(
-                student_id='admin',
-                name='Administrator',
-                role='admin',
-                is_active=True
-            )
-            admin.set_password('admin1234')
-            db.session.add(admin)
-            click.echo("✅ 관리자 계정이 생성되었습니다.")
-        else:
-            click.echo("ℹ️  관리자 계정이 이미 존재합니다.")
         
         db.session.commit()
         click.echo("")
@@ -256,12 +257,8 @@ def seed_admin(ctx):
         click.echo("계정 정보:")
         click.echo("=" * 60)
         click.echo("슈퍼 관리자:")
-        click.echo("  학번: super")
-        click.echo("  비밀번호: super1234")
-        click.echo("")
-        click.echo("관리자:")
-        click.echo("  학번: admin")
-        click.echo("  비밀번호: admin1234")
+        click.echo(f"  학번: {super_student_id}")
+        click.echo(f"  비밀번호: {super_password}")
         click.echo("=" * 60)
         
     except Exception as e:

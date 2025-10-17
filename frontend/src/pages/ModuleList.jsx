@@ -15,6 +15,14 @@ const ModuleList = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const { user } = useAuth()
 
+  const scrollToVideos = () => {
+    if (typeof window === 'undefined') return
+    const target = document.getElementById('video-list')
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
   useEffect(() => {
     // 로그인 사용자 정보가 준비된 뒤에만 목록 호출
     if (user) {
@@ -89,53 +97,19 @@ const ModuleList = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HeroSection />
+      <HeroSection stats={stats} onExploreClick={scrollToVideos} />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <HiBookmark className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">전체 모듈</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <HiBookmark className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">완료된 모듈</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <HiBookmark className="h-6 w-6 text-yellow-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">진행 중인 모듈</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.inProgress}</p>
-              </div>
-            </div>
+      <div id="video-list" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">학습 가능한 영상</h2>
+            <p className="text-sm text-gray-600">필터를 사용해 원하는 모듈을 바로 찾아보세요.</p>
           </div>
         </div>
 
-        {/* Filter Bar */}
         <FilterBar
           searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          placeholder="모듈 검색..."
+          setSearchTerm={setSearchTerm}
         />
 
         {/* Module Grid */}
@@ -163,7 +137,6 @@ const ModuleList = () => {
 }
 
 export default ModuleList
-
 
 
 
