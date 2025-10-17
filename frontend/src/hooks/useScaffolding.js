@@ -18,13 +18,13 @@ export const useScaffolding = () => {
     /**
      * 스캐폴딩 응답 저장
      */
-    const saveResponse = useCallback(async (videoId, scaffoldingId, responseText) => {
+    const saveResponse = useCallback(async (moduleId, scaffoldingId, responseText) => {
         try {
             setLoading(true)
             setError(null)
 
             await api.post(
-                API_ENDPOINTS.VIDEOS.SCAFFOLDING_RESPOND(videoId, scaffoldingId), {
+                API_ENDPOINTS.MODULES.SCAFFOLDING_RESPOND(moduleId, scaffoldingId), {
                     response_text: responseText
                 }
             )

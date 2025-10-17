@@ -57,7 +57,7 @@ const Navbar = () => {
               {/* Logo/Brand */}
               <Link 
                 to="/" 
-                className="flex items-center space-x-2 group transition-all duration-300"
+                className="flex items-center space-x-2 group transition-all duration-300 flex-shrink-0"
               >
                 <div className="relative">
                   <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 to-accent-600 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-300"></div>
@@ -65,92 +65,94 @@ const Navbar = () => {
                     <HiVideoCamera className="text-xl text-white" />
                   </div>
                 </div>
-                <div>
-                  <span className="font-bold text-lg bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent hidden sm:block">
+                <div className="hidden sm:block">
+                  <span className="font-bold text-lg bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent whitespace-nowrap">
                     VCBL 학습 플랫폼
                   </span>
-                  <span className="font-bold text-lg bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent sm:hidden">
+                </div>
+                <div className="sm:hidden">
+                  <span className="font-bold text-lg bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent whitespace-nowrap">
                     VCBL
                   </span>
                 </div>
               </Link>
               
               {/* Desktop Menu */}
-              <div className="hidden md:flex items-center space-x-1">
+              <div className="hidden lg:flex items-center space-x-1 flex-1 justify-center">
                 <Link 
                   to="/" 
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${
                     isActiveLink('/') 
                       ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                       : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'
                   }`}
                 >
-                  <HiHome className="text-lg" />
-                  <span className="font-medium">학습하기</span>
+                  <HiHome className="text-lg flex-shrink-0" />
+                  <span className="font-medium text-sm">학습하기</span>
                 </Link>
                     
                 {isAdmin() && (
                   <>
                     <Link 
                       to="/admin" 
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${
                         isActiveLink('/admin') 
                           ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                           : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'
                       }`}
                     >
-                      <HiChartBar className="text-lg" />
-                      <span className="font-medium">대시보드</span>
+                      <HiChartBar className="text-lg flex-shrink-0" />
+                      <span className="font-medium text-sm">대시보드</span>
                     </Link>
                     <Link 
                       to="/admin/students" 
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${
                         isActiveLink('/admin/students') 
                           ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                           : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'
                       }`}
                     >
-                      <HiUsers className="text-lg" />
-                      <span className="font-medium">학생 관리</span>
+                      <HiUsers className="text-lg flex-shrink-0" />
+                      <span className="font-medium text-sm">학생 관리</span>
                     </Link>
                     <Link 
                       to="/admin/content" 
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${
                         isActiveLink('/admin/content') 
                           ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                           : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'
                       }`}
                     >
-                      <HiVideoCamera className="text-lg" />
-                      <span className="font-medium">콘텐츠 관리</span>
+                      <HiVideoCamera className="text-lg flex-shrink-0" />
+                      <span className="font-medium text-sm">콘텐츠 관리</span>
                     </Link>
                     <Link 
                       to="/admin/personas" 
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${
                         isActiveLink('/admin/personas') 
                           ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                           : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'
                       }`}
                     >
-                      <HiChatAlt2 className="text-lg" />
-                      <span className="font-medium">챗봇 관리</span>
+                      <HiChatAlt2 className="text-lg flex-shrink-0" />
+                      <span className="font-medium text-sm">챗봇 관리</span>
                     </Link>
                     <Link 
                       to="/admin/logs" 
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${
                         isActiveLink('/admin/logs') 
                           ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                           : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'
                       }`}
                     >
-                      <HiCog className="text-lg" />
-                      <span className="font-medium">활동 로그</span>
+                      <HiCog className="text-lg flex-shrink-0" />
+                      <span className="font-medium text-sm">활동 로그</span>
                     </Link>
                   </>
                 )}
                 
                 {/* User Info with Avatar */}
-                <div className="ml-4 flex items-center space-x-3 px-4 py-2 bg-gradient-to-r from-primary-50 to-accent-50 rounded-xl border border-primary-100">
+                <div className="ml-4 flex items-center space-x-3 px-3 py-2 bg-gradient-to-r from-primary-50 to-accent-50 rounded-lg border border-primary-100 flex-shrink-0">
                   {/* Avatar with initials */}
                   <div className="relative">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-600 to-accent-600 flex items-center justify-center">
@@ -159,16 +161,16 @@ const Navbar = () => {
                       </span>
                     </div>
                     {isAdmin() && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent-500 rounded-full border-2 border-white" title="관리자">
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent-500 rounded-full border-2 border-white flex items-center justify-center" title="관리자">
                         <HiSparkles className="text-[8px] text-white" />
                       </div>
                     )}
                   </div>
-                  <div className="text-left">
-                    <div className="text-sm font-semibold text-gray-800 leading-tight">
+                  <div className="text-left min-w-0">
+                    <div className="text-sm font-semibold text-gray-800 leading-tight truncate">
                       {user.name}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 truncate">
                       {user.student_id}
                     </div>
                   </div>
@@ -177,106 +179,106 @@ const Navbar = () => {
                 {/* Logout Button */}
                 <button
                   onClick={handleLogout}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 hover:shadow-md transition-all duration-200 ml-2"
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:shadow-md transition-all duration-200 ml-2 flex-shrink-0"
                 >
-                  <HiLogout className="text-lg" />
-                  <span className="font-medium">로그아웃</span>
+                  <HiLogout className="text-lg flex-shrink-0" />
+                  <span className="font-medium text-sm whitespace-nowrap">로그아웃</span>
                 </button>
               </div>
 
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 rounded-xl text-gray-700 hover:bg-primary-50 transition-all duration-200"
+                className="lg:hidden p-2 rounded-lg text-gray-700 hover:bg-primary-50 transition-all duration-200 flex-shrink-0"
               >
-                {mobileMenuOpen ? <HiX className="text-2xl" /> : <HiMenuAlt3 className="text-2xl" />}
+                {mobileMenuOpen ? <HiX className="text-xl" /> : <HiMenuAlt3 className="text-xl" />}
               </button>
             </div>
 
             {/* Mobile Menu with smooth transition */}
             {mobileMenuOpen && (
-              <div className="md:hidden pb-4">
+              <div className="lg:hidden pb-4">
                 <div className="pt-4 border-t border-gray-200 space-y-2 animate-slide-down">
                   <Link 
                     to="/" 
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
+                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
                       isActiveLink('/') 
                         ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                         : 'text-gray-700 hover:bg-primary-50'
                     }`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <HiHome className="text-xl" />
-                    <span className="font-medium">학습하기</span>
+                    <HiHome className="text-lg flex-shrink-0" />
+                    <span className="font-medium text-sm">학습하기</span>
                   </Link>
                   
                   {isAdmin() && (
                     <>
                       <Link 
                         to="/admin" 
-                        className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
+                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
                           isActiveLink('/admin') 
                             ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                             : 'text-gray-700 hover:bg-primary-50'
                         }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        <HiChartBar className="text-xl" />
-                        <span className="font-medium">대시보드</span>
+                        <HiChartBar className="text-lg flex-shrink-0" />
+                        <span className="font-medium text-sm">대시보드</span>
                       </Link>
                       <Link 
                         to="/admin/students" 
-                        className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
+                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
                           isActiveLink('/admin/students') 
                             ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                             : 'text-gray-700 hover:bg-primary-50'
                         }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        <HiUsers className="text-xl" />
-                        <span className="font-medium">학생 관리</span>
+                        <HiUsers className="text-lg flex-shrink-0" />
+                        <span className="font-medium text-sm">학생 관리</span>
                       </Link>
                       <Link 
                         to="/admin/content" 
-                        className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
+                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
                           isActiveLink('/admin/content') 
                             ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                             : 'text-gray-700 hover:bg-primary-50'
                         }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        <HiVideoCamera className="text-xl" />
-                        <span className="font-medium">콘텐츠 관리</span>
+                        <HiVideoCamera className="text-lg flex-shrink-0" />
+                        <span className="font-medium text-sm">콘텐츠 관리</span>
                       </Link>
                       <Link 
                         to="/admin/personas" 
-                        className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
+                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
                           isActiveLink('/admin/personas') 
                             ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                             : 'text-gray-700 hover:bg-primary-50'
                         }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        <HiChatAlt2 className="text-xl" />
-                        <span className="font-medium">챗봇 관리</span>
+                        <HiChatAlt2 className="text-lg flex-shrink-0" />
+                        <span className="font-medium text-sm">챗봇 관리</span>
                       </Link>
                       <Link 
                         to="/admin/logs" 
-                        className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
+                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
                           isActiveLink('/admin/logs') 
                             ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                             : 'text-gray-700 hover:bg-primary-50'
                         }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        <HiCog className="text-xl" />
-                        <span className="font-medium">활동 로그</span>
+                        <HiCog className="text-lg flex-shrink-0" />
+                        <span className="font-medium text-sm">활동 로그</span>
                       </Link>
                     </>
                   )}
                   
                   {/* Mobile User Info */}
-                  <div className="px-4 py-3 bg-gradient-to-r from-primary-50 to-accent-50 rounded-xl border border-primary-100 flex items-center space-x-3 mt-4">
+                  <div className="px-4 py-3 bg-gradient-to-r from-primary-50 to-accent-50 rounded-lg border border-primary-100 flex items-center space-x-3 mt-4">
                     <div className="relative">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-600 to-accent-600 flex items-center justify-center">
                         <span className="text-sm font-bold text-white">
@@ -289,11 +291,11 @@ const Navbar = () => {
                         </div>
                       )}
                     </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-gray-800">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-gray-800 truncate">
                         {user.name}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-500 truncate">
                         {user.student_id}
                       </div>
                     </div>
@@ -305,10 +307,10 @@ const Navbar = () => {
                       setMobileMenuOpen(false)
                       handleLogout()
                     }}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
                   >
-                    <HiLogout className="text-xl" />
-                    <span className="font-medium">로그아웃</span>
+                    <HiLogout className="text-lg flex-shrink-0" />
+                    <span className="font-medium text-sm">로그아웃</span>
                   </button>
                 </div>
               </div>

@@ -7,12 +7,12 @@ export const API_ENDPOINTS = {
         CHANGE_PASSWORD: '/auth/change-password',
         PASSWORD_RESET_REQUEST: '/auth/password-reset-request',
     },
-    VIDEOS: {
-        LIST: '/videos',
-        DETAIL: (videoId) => `/videos/${videoId}`,
-        EVENT: (videoId) => `/videos/${videoId}/event`,
-        SCAFFOLDING_RESPOND: (videoId, scaffoldingId) =>
-            `/videos/${videoId}/scaffoldings/${scaffoldingId}/respond`,
+    MODULES: {
+        LIST: '/modules',
+        DETAIL: (moduleId) => `/modules/${moduleId}`,
+        EVENT: (moduleId) => `/modules/${moduleId}/event`,
+        SCAFFOLDING_RESPOND: (moduleId, scaffoldingId) =>
+            `/modules/${moduleId}/scaffoldings/${scaffoldingId}/respond`,
     },
     CHAT: {
         SESSIONS: '/chat/sessions',
@@ -24,9 +24,9 @@ export const API_ENDPOINTS = {
         USER_ROLE: (userId) => `/admin/users/${userId}/role`,
         USER_ACTIVATE: (userId) => `/admin/users/${userId}/activate`,
         USER_RESET_PASSWORD: (userId) => `/admin/users/${userId}/reset-password`,
-        VIDEOS: '/admin/videos',
-        VIDEO_DETAIL: (videoId) => `/admin/videos/${videoId}`,
-        SCAFFOLDINGS: (videoId) => `/admin/videos/${videoId}/scaffoldings`,
+        MODULES: '/admin/modules',
+        MODULE_DETAIL: (moduleId) => `/admin/modules/${moduleId}`,
+        SCAFFOLDINGS: (moduleId) => `/admin/modules/${moduleId}/scaffoldings`,
         SCAFFOLDING_DETAIL: (scaffoldingId) => `/admin/scaffoldings/${scaffoldingId}`,
         PROMPTS: '/admin/prompts',
         PROMPT_DETAIL: (promptId) => `/admin/prompts/${promptId}`,

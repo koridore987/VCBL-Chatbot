@@ -20,7 +20,7 @@ import {
 } from 'react-icons/hi'
 
 const LearningInterface = () => {
-  const { videoId } = useParams()
+  const { moduleId } = useParams()
   const navigate = useNavigate()
   const [video, setVideo] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -38,8 +38,8 @@ const LearningInterface = () => {
   const [showCelebration, setShowCelebration] = useState(false)
 
   useEffect(() => {
-    fetchVideo()
-  }, [videoId])
+    fetchModule()
+  }, [moduleId])
 
   useEffect(() => {
     return () => {
@@ -49,27 +49,27 @@ const LearningInterface = () => {
     }
   }, [])
 
-  const fetchVideo = async () => {
+  const fetchModule = async () => {
     try {
-      const response = await api.get(`/videos/${videoId}`)
-      const videoPayload = response.data
-      setVideo(videoPayload)
+      const response = await api.get(`/modules/${moduleId}`)
+      const modulePayload = response.data
+      setVideo(modulePayload)
       
-      if (videoPayload.scaffolding_mode === 'prompt') {
+      if (modulePayload.scaffolding_mode === 'prompt') {
         setActiveTab('scaffolding')
-      } else if (videoPayload.scaffolding_mode === 'chat') {
+      } else if (modulePayload.scaffolding_mode === 'chat') {
         setActiveTab('chat')
       }
       
-      const progress = videoPayload.learning_progress
-      const surveyAlreadyCompleted = progress?.survey_completed ?? !videoPayload.survey_url
+      const progress = modulePayload.learning_progress
+      const surveyAlreadyCompleted = progress?.survey_completed ?? !modulePayload.survey_url
       setSurveyCompleted(surveyAlreadyCompleted)
       const isNewlyCompleted = progress?.is_completed && !previousCompletionRef.current
       
-      if (isNewlyCompleted && videoPayload.survey_url && !surveyAlreadyCompleted) {
+      if (isNewlyCompleted && modulePayload.survey_url && !surveyAlreadyCompleted) {
         setShowSurveyModal(true)
-        handleVideoEvent('survey_modal_shown', {
-          survey_url: videoPayload.survey_url
+        handleModuleEvent('survey_modal_shown', {
+          survey_url: modulePayload.survey_url
         })
       }
       
@@ -81,7 +81,7 @@ const LearningInterface = () => {
         previousCompletionRef.current = true
       }
     } catch (err) {
-      setError('비디오를 불러오는데 실패했습니다')
+      setError('모듈을 불러오는데 실패했습니다')
     } finally {
       setLoading(false)
     }
@@ -89,7 +89,7 @@ const LearningInterface = () => {
   
   const handleSurveyOpen = () => {
     if (!video?.survey_url) return
-    handleVideoEvent('survey_opened', {
+    handleModuleEvent('survey_opened', {
       survey_url: video.survey_url
     })
   }
@@ -110,9 +110,9 @@ const LearningInterface = () => {
     
     try {
       setSurveySubmitting(true)
-      const response = await api.post(`/videos/${videoId}/survey-complete`)
+      const response = await api.post(`/modules/${moduleId}/survey-complete`)
       
-      handleVideoEvent('survey_completed', {
+      handleModuleEvent('survey_completed', {
         survey_url: video.survey_url
       })
       
@@ -141,9 +141,9 @@ const LearningInterface = () => {
   }
   
 
-  const handleVideoEvent = (eventType, eventData) => {
-    console.log(`Video Event: ${eventType}`, eventData)
-    api.post(`/videos/${videoId}/event`, {
+  const handleModuleEvent = (eventType, eventData) => {
+    console.log(`Module Event: ${eventType}`, eventData)
+    api.post(`/modules/${moduleId}/event`, {
       event_type: eventType,
       event_data: eventData
     }).catch(err => console.error('Failed to log event:', err))
@@ -156,7 +156,7 @@ const LearningInterface = () => {
     
     try {
       setIsFinishing(true)
-      const response = await api.post(`/videos/${videoId}/complete`, {
+      const response = await api.post(`/modules/${moduleId}/complete`, {
         survey_confirmed: surveyConfirmed
       })
       

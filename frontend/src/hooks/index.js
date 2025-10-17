@@ -6,9 +6,9 @@ export {
 }
 from './useChat'
 export {
-    useVideo
+    useModule
 }
-from './useVideo'
+from './useModule'
 export {
     useScaffolding
 }
