@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
+import SortableTable from '../components/SortableTable'
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([])
@@ -141,7 +142,13 @@ const AdminUsers = () => {
   }
 
   const downloadCSVTemplate = () => {
-    const csvContent = 'student_id,name,role\n2024123456,홍길동,user\n2024123457,김철수,admin'
+    // UTF-8 BOM 추가로 Excel에서도 한글이 깨지지 않도록
+    const BOM = '\uFEFF'
+    const csvContent = `${BOM}student_id,name,role
+2024123456,홍길동,user
+2024123457,김철수,admin
+2024123458,이영희,user`
+    
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
@@ -153,6 +160,11 @@ const AdminUsers = () => {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    
+    // 안내 메시지
+    setTimeout(() => {
+      alert('CSV 템플릿이 다운로드되었습니다.\n\n주의사항:\n- 컬럼 순서: student_id, name, role\n- 학번은 10자리 숫자여야 합니다.\n- Excel에서 수정 후 CSV로 저장하세요.')
+    }, 100)
   }
 
   if (loading) {
@@ -207,47 +219,66 @@ const AdminUsers = () => {
         <div className="card">
           <h3 style={{ marginBottom: '15px' }}>학습 활동 기록</h3>
           
-          {userLogs.length === 0 ? (
-            <p style={{ color: '#666', textAlign: 'center', padding: '20px' }}>
-              아직 활동 기록이 없습니다
-            </p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #ddd' }}>
-                    <th style={{ padding: '12px', textAlign: 'left' }}>시간</th>
-                    <th style={{ padding: '12px', textAlign: 'left' }}>이벤트</th>
-                    <th style={{ padding: '12px', textAlign: 'left' }}>비디오 ID</th>
-                    <th style={{ padding: '12px', textAlign: 'left' }}>상세</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {userLogs.map((log) => (
-                    <tr key={log.id} style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{ padding: '12px', fontSize: '14px' }}>
-                        {new Date(log.created_at).toLocaleString('ko-KR')}
-                      </td>
-                      <td style={{ padding: '12px' }}>
-                        <span style={{
-                          padding: '4px 8px',
-                          borderRadius: '3px',
-                          backgroundColor: '#e3f2fd',
-                          fontSize: '12px'
-                        }}>
-                          {log.event_type}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px' }}>{log.video_id || '-'}</td>
-                      <td style={{ padding: '12px', fontSize: '12px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {log.event_data?.substring(0, 50) || '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <SortableTable
+            data={userLogs}
+            columns={[
+              {
+                key: 'created_at',
+                label: '시간',
+                sortable: true,
+                searchable: false,
+                width: '180px',
+                render: (value) => new Date(value).toLocaleString('ko-KR')
+              },
+              {
+                key: 'event_type',
+                label: '이벤트',
+                sortable: true,
+                searchable: true,
+                width: '150px',
+                render: (value) => (
+                  <span style={{
+                    padding: '4px 8px',
+                    borderRadius: '3px',
+                    backgroundColor: '#e3f2fd',
+                    fontSize: '12px'
+                  }}>
+                    {value}
+                  </span>
+                )
+              },
+              {
+                key: 'video_id',
+                label: '비디오 ID',
+                sortable: true,
+                width: '120px',
+                render: (value) => value || '-'
+              },
+              {
+                key: 'event_data',
+                label: '상세',
+                sortable: false,
+                render: (value) => (
+                  <div style={{ 
+                    fontSize: '12px', 
+                    maxWidth: '300px', 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {value?.substring(0, 50) || '-'}
+                  </div>
+                )
+              }
+            ]}
+            enableSearch={true}
+            searchPlaceholder="이벤트 타입으로 검색..."
+            emptyState={
+              <p style={{ color: '#666', textAlign: 'center', padding: '20px' }}>
+                아직 활동 기록이 없습니다
+              </p>
+            }
+          />
         </div>
       </div>
     )
@@ -298,79 +329,103 @@ const AdminUsers = () => {
         </div>
       )}
       
-      <div className="card" style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid #ddd' }}>
-              <th style={{ padding: '12px', textAlign: 'left' }}>학번</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>이름</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>권한</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>상태</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>토큰 (일일/전체)</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>가입상태</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>작업</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr 
-                key={user.id} 
-                style={{ borderBottom: '1px solid #eee', cursor: 'pointer' }}
-                onClick={() => handleUserClick(user)}
-              >
-                <td style={{ padding: '12px' }}>{user.student_id}</td>
-                <td style={{ padding: '12px' }}>{user.name}</td>
-                <td style={{ padding: '12px' }}>
-                  {isSuperAdmin() && user.role !== 'super' ? (
-                    <select
-                      value={user.role}
-                      onChange={(e) => {
-                        e.stopPropagation()
-                        handleRoleChange(user.id, e.target.value)
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ padding: '5px', borderRadius: '3px', border: '1px solid #ddd' }}
-                    >
-                      <option value="user">User</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  ) : (
-                    <span style={{ 
-                      fontWeight: user.role === 'super' ? 'bold' : 'normal',
-                      color: user.role === 'super' ? '#9C27B0' : 'inherit'
-                    }}>
-                      {user.role === 'super' ? 'Super (보호됨)' : user.role}
-                    </span>
-                  )}
-                </td>
-                <td style={{ padding: '12px' }}>
-                  <span style={{
-                    padding: '4px 8px',
-                    borderRadius: '3px',
-                    backgroundColor: user.is_active ? '#e8f5e9' : '#ffebee',
-                    color: user.is_active ? '#2e7d32' : '#c62828',
-                    fontSize: '12px'
+      <div className="card">
+        <SortableTable
+          data={users}
+          columns={[
+            {
+              key: 'student_id',
+              label: '학번',
+              sortable: true,
+              searchable: true,
+              width: '120px'
+            },
+            {
+              key: 'name',
+              label: '이름',
+              sortable: true,
+              searchable: true,
+              width: '100px'
+            },
+            {
+              key: 'role',
+              label: '권한',
+              sortable: true,
+              width: '150px',
+              render: (value, user) => (
+                isSuperAdmin() && user.role !== 'super' ? (
+                  <select
+                    value={user.role}
+                    onChange={(e) => {
+                      e.stopPropagation()
+                      handleRoleChange(user.id, e.target.value)
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ padding: '5px', borderRadius: '3px', border: '1px solid #ddd' }}
+                  >
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                ) : (
+                  <span style={{ 
+                    fontWeight: user.role === 'super' ? 'bold' : 'normal',
+                    color: user.role === 'super' ? '#9C27B0' : 'inherit'
                   }}>
-                    {user.is_active ? '활성' : '비활성'}
+                    {user.role === 'super' ? 'Super (보호됨)' : user.role}
                   </span>
-                </td>
-                <td style={{ padding: '12px' }}>
-                  {user.daily_token_usage || 0} / {user.total_token_usage || 0}
-                </td>
-                <td style={{ padding: '12px' }}>
-                  {user.password_hash ? (
-                    <span style={{ color: '#4CAF50', fontSize: '12px' }}>✓ 가입완료</span>
-                  ) : (
-                    <span style={{ color: '#FF9800', fontSize: '12px' }}>대기중</span>
-                  )}
-                </td>
-                <td style={{ padding: '12px' }} onClick={(e) => e.stopPropagation()}>
+                )
+              )
+            },
+            {
+              key: 'is_active',
+              label: '상태',
+              sortable: true,
+              width: '90px',
+              render: (value) => (
+                <span style={{
+                  padding: '4px 8px',
+                  borderRadius: '3px',
+                  backgroundColor: value ? '#e8f5e9' : '#ffebee',
+                  color: value ? '#2e7d32' : '#c62828',
+                  fontSize: '12px'
+                }}>
+                  {value ? '활성' : '비활성'}
+                </span>
+              )
+            },
+            {
+              key: 'token_usage',
+              label: '토큰 (일일/전체)',
+              sortable: false,
+              width: '150px',
+              render: (_, user) => `${user.daily_token_usage || 0} / ${user.total_token_usage || 0}`
+            },
+            {
+              key: 'password_hash',
+              label: '가입상태',
+              sortable: true,
+              width: '100px',
+              render: (value) => (
+                value ? (
+                  <span style={{ color: '#4CAF50', fontSize: '12px' }}>✓ 가입완료</span>
+                ) : (
+                  <span style={{ color: '#FF9800', fontSize: '12px' }}>대기중</span>
+                )
+              )
+            },
+            {
+              key: 'actions',
+              label: '작업',
+              sortable: false,
+              width: '200px',
+              render: (_, user) => (
+                <div onClick={(e) => e.stopPropagation()}>
                   {user.role === 'super' ? (
                     <span style={{ fontSize: '12px', color: '#666', fontStyle: 'italic' }}>
                       수정 불가
                     </span>
                   ) : (
-                    <div style={{ display: 'flex', gap: '5px' }}>
+                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
@@ -395,11 +450,19 @@ const AdminUsers = () => {
                       )}
                     </div>
                   )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              )
+            }
+          ]}
+          onRowClick={handleUserClick}
+          enableSearch={true}
+          searchPlaceholder="학번 또는 이름으로 검색..."
+          emptyState={
+            <div style={{ color: '#666', textAlign: 'center', padding: '20px' }}>
+              아직 등록된 학생이 없습니다
+            </div>
+          }
+        />
       </div>
     </div>
   )

@@ -12,7 +12,7 @@ const AdminDashboard = () => {
   const fetchStats = async () => {
     try {
       const response = await api.get('/logs/stats')
-      setStats(response.data)
+      setStats(response.data.data)
     } catch (err) {
       console.error('Failed to fetch stats:', err)
     } finally {
@@ -23,7 +23,7 @@ const AdminDashboard = () => {
   const fetchProgress = async () => {
     try {
       const response = await api.get('/admin/progress?limit=25')
-      setProgress(response.data)
+      setProgress(response.data.data)
     } catch (err) {
       console.error('Failed to fetch progress:', err)
     } finally {

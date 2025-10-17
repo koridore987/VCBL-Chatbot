@@ -10,7 +10,7 @@ const AdminLogs = () => {
   const [filters, setFilters] = useState({
     event_type: '',
     user_id: '',
-    video_id: ''
+    module_id: ''
   })
   const [expandedLog, setExpandedLog] = useState(null)
   const [users, setUsers] = useState([])
@@ -27,12 +27,12 @@ const AdminLogs = () => {
     }
   }
 
-  const fetchVideos = async () => {
+  const fetchModules = async () => {
     try {
-      const response = await api.get('/admin/videos')
+      const response = await api.get('/admin/modules')
       setVideos(response.data.data || [])
     } catch (err) {
-      console.error('Failed to fetch videos:', err)
+      console.error('Failed to fetch modules:', err)
       setVideos([])
     }
   }
@@ -63,7 +63,7 @@ const AdminLogs = () => {
         page: page.toString(),
         per_page: '20',  // 세션 단위이므로 더 적게
         user_id: filters.user_id || '',
-        video_id: filters.video_id || ''
+        module_id: filters.module_id || ''
       })
       
       const response = await api.get(`/logs/chat-sessions-grouped?${params}`)
@@ -83,7 +83,7 @@ const AdminLogs = () => {
         page: page.toString(),
         per_page: '20',
         user_id: filters.user_id || '',
-        video_id: filters.video_id || ''
+        module_id: filters.module_id || ''
       })
       
       const response = await api.get(`/logs/timeline?${params}`)
@@ -161,16 +161,16 @@ const AdminLogs = () => {
   }
 
   // 비디오 제목 찾기
-  const getVideoTitle = (videoId) => {
-    const video = videos.find(v => v.id === videoId)
-    return video ? video.title : `ID: ${videoId}`
+  const getModuleTitle = (moduleId) => {
+    const module = videos.find(v => v.id === moduleId)
+    return module ? module.title : `ID: ${moduleId}`
   }
 
   // 사용자 및 비디오 목록 가져오기
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        await Promise.all([fetchUsers(), fetchVideos()])
+        await Promise.all([fetchUsers(), fetchModules()])
       } catch (err) {
         console.error('Failed to load initial data:', err)
       } finally {
@@ -273,13 +273,13 @@ const AdminLogs = () => {
           </div>
           
           <div className="form-group">
-            <label className="form-label">비디오</label>
+            <label className="form-label">모듈</label>
             <select
               className="form-input"
-              value={filters.video_id}
-              onChange={(e) => setFilters({ ...filters, video_id: e.target.value })}
+              value={filters.module_id}
+              onChange={(e) => setFilters({ ...filters, module_id: e.target.value })}
             >
-              <option value="">전체 비디오</option>
+              <option value="">전체 모듈</option>
               {videos.map((video) => (
                 <option key={video.id} value={video.id}>
                   {video.title}
@@ -302,7 +302,7 @@ const AdminLogs = () => {
           </button>
           <button
             onClick={() => {
-              setFilters({ event_type: '', user_id: '', video_id: '' })
+              setFilters({ event_type: '', user_id: '', module_id: '' })
               setPage(1)
             }}
             className="btn btn-secondary"
@@ -392,16 +392,16 @@ const AdminLogs = () => {
                             <span style={{ fontSize: '14px', color: '#666' }}>
                               {session.user ? `${session.user.name} (${session.user.student_id})` : `사용자 ID: ${session.user_id}`}
                             </span>
-                            {session.video_id && (
+                            {session.module_id && (
                               <span style={{ fontSize: '14px', color: '#666' }}>
-                                📹 {getVideoTitle(session.video_id)}
+                                📹 {getModuleTitle(session.module_id)}
                               </span>
                             )}
                             <span style={{ fontSize: '12px', color: '#666', backgroundColor: '#f3e5f5', padding: '2px 6px', borderRadius: '3px' }}>
                               {session.messages?.length || 0}개 대화
                             </span>
                             <span style={{ fontSize: '12px', color: '#666', backgroundColor: '#e8f5e9', padding: '2px 6px', borderRadius: '3px' }}>
-                              {session.video_events?.length || 0}개 이벤트
+                              {session.module_events?.length || 0}개 이벤트
                             </span>
                             {session.total_tokens > 0 && (
                               <span style={{ fontSize: '12px', color: '#666', backgroundColor: '#fff3e0', padding: '2px 6px', borderRadius: '3px' }}>
@@ -423,9 +423,9 @@ const AdminLogs = () => {
                             <span style={{ fontSize: '14px', color: '#666' }}>
                               {log.user ? `${log.user.name} (${log.user.student_id})` : `사용자 ID: ${log.user_id}`}
                             </span>
-                            {log.video_id && (
+                            {log.module_id && (
                               <span style={{ fontSize: '14px', color: '#666' }}>
-                                📹 {getVideoTitle(log.video_id)}
+                                📹 {getModuleTitle(log.module_id)}
                               </span>
                             )}
                             <span style={{ fontSize: '12px', color: '#666', backgroundColor: '#f3e5f5', padding: '2px 6px', borderRadius: '3px' }}>
@@ -451,9 +451,9 @@ const AdminLogs = () => {
                             <span style={{ fontSize: '14px', color: '#666' }}>
                               {getUserName(session.user_id)}
                             </span>
-                            {session.video_id && (
+                            {session.module_id && (
                               <span style={{ fontSize: '14px', color: '#666' }}>
-                                📹 {getVideoTitle(session.video_id)}
+                                📹 {getModuleTitle(session.module_id)}
                               </span>
                             )}
                           </>

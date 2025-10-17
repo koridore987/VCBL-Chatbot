@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react'
-import CodeMirror from '@uiw/react-codemirror'
-import { javascript } from '@codemirror/lang-javascript'
 import {
   DndContext,
   closestCenter,
@@ -14,107 +12,28 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { motion, AnimatePresence } from 'framer-motion'
+import { HiPlus, HiPencil, HiTrash, HiViewList, HiX } from 'react-icons/hi'
 import api from '../services/api'
 
-// 재사용 가능한 2-Column 레이아웃 컴포넌트
-const TwoColumnLayout = ({ 
-  leftPanel, 
-  rightPanel, 
-  showRightPanel, 
-  onCloseRightPanel,
-  rightPanelTitle,
-  rightPanelContent 
-}) => {
-  return (
-    <div style={{ 
-      display: 'flex', 
-      gap: '20px', 
-      height: '80vh',
-      minHeight: '600px',
-      maxHeight: '800px'
-    }}>
-      {/* Left Panel */}
-      <div style={{ 
-        flex: showRightPanel ? '0 0 40%' : '1', 
-        display: 'flex', 
-        flexDirection: 'column',
-        borderRight: showRightPanel ? '1px solid #e5e7eb' : 'none',
-        paddingRight: showRightPanel ? '20px' : '0',
-        transition: 'all 0.4s ease-in-out'
-      }}>
-        {leftPanel}
-      </div>
-
-      {/* Right Panel */}
-      <AnimatePresence>
-        {showRightPanel && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            style={{ 
-              flex: '1',
-              display: 'flex',
-              flexDirection: 'column',
-              minWidth: '0'
-            }}
-          >
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '20px',
-              paddingBottom: '10px',
-              borderBottom: '1px solid #e5e7eb'
-            }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
-                {rightPanelTitle}
-              </h3>
-              <button
-                onClick={onCloseRightPanel}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  padding: '5px',
-                  borderRadius: '4px',
-                  color: '#6b7280'
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <div style={{ flex: 1, overflow: 'auto' }}>
-              {rightPanelContent}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
 const AdminModules = () => {
-  const [activeTab, setActiveTab] = useState('modules')
   const [modules, setModules] = useState([])
   const [loading, setLoading] = useState(true)
   const [editingModule, setEditingModule] = useState(null)
-  const [showForm, setShowForm] = useState(false)
   const [selectedModule, setSelectedModule] = useState(null)
   const [scaffoldings, setScaffoldings] = useState([])
-  const [showRightPanel, setShowRightPanel] = useState(false)
-  const [rightPanelTitle, setRightPanelTitle] = useState('')
-  const [rightPanelContent, setRightPanelContent] = useState(null)
+  const [rightPanelMode, setRightPanelMode] = useState(null) // 'form', 'scaffolding', or 'scaffolding-form'
+  const [editingScaffolding, setEditingScaffolding] = useState(null)
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -122,45 +41,44 @@ const AdminModules = () => {
 
   const fetchModules = async () => {
     try {
+      setLoading(true)
       const response = await api.get('/admin/modules')
       setModules(response.data.data || [])
     } catch (error) {
       console.error('Failed to fetch modules:', error)
-    }
-  }
-
-  const fetchPrompts = async () => {
-    try {
-      const response = await api.get('/admin/prompts')
-      // Handle prompts if needed
-    } catch (error) {
-      console.error('Failed to fetch prompts:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
   useEffect(() => {
     fetchModules()
-    fetchPrompts()
   }, [])
 
   const handleCreateModule = async (moduleData) => {
     try {
-      const response = await api.post('/admin/modules', moduleData)
-      setModules([...modules, response.data.data])
-      setShowForm(false)
+      await api.post('/admin/modules', moduleData)
+      await fetchModules()
+      closeRightPanel()
     } catch (error) {
       console.error('Failed to create module:', error)
+      alert('모듈 생성 중 오류가 발생했습니다.')
     }
   }
 
   const handleUpdateModule = async (moduleId, moduleData) => {
     try {
       const response = await api.put(`/admin/modules/${moduleId}`, moduleData)
-      setModules(modules.map(m => m.id === moduleId ? response.data.data : m))
-      setEditingModule(null)
-      setShowForm(false)
+      const updatedModule = response.data.data
+      if (updatedModule) {
+        setModules(modules.map(m => m.id === moduleId ? updatedModule : m))
+      } else {
+        console.error('No data in response')
+      }
+      closeRightPanel()
     } catch (error) {
       console.error('Failed to update module:', error)
+      alert('모듈 수정 중 오류가 발생했습니다.')
     }
   }
 
@@ -171,6 +89,7 @@ const AdminModules = () => {
         setModules(modules.filter(m => m.id !== moduleId))
       } catch (error) {
         console.error('Failed to delete module:', error)
+        alert('모듈 삭제 중 오류가 발생했습니다.')
       }
     }
   }
@@ -185,7 +104,6 @@ const AdminModules = () => {
       const newModules = arrayMove(modules, oldIndex, newIndex)
       setModules(newModules)
 
-      // Update order_index in backend
       try {
         const updates = newModules.map((module, index) => ({
           id: module.id,
@@ -197,15 +115,18 @@ const AdminModules = () => {
         }
       } catch (error) {
         console.error('Failed to update module order:', error)
-        // Revert on error
         fetchModules()
       }
     }
   }
 
+  const openFormPanel = (module = null) => {
+    setEditingModule(module)
+    setRightPanelMode('form')
+  }
+
   const openScaffoldingsPanel = async (module) => {
     setSelectedModule(module)
-    setRightPanelTitle(`스캐폴딩 관리 - ${module.title}`)
     
     try {
       const response = await api.get(`/admin/modules/${module.id}/scaffoldings`)
@@ -215,159 +136,233 @@ const AdminModules = () => {
       setScaffoldings([])
     }
     
-    setRightPanelContent(
-      <div>
-        <div style={{ marginBottom: '20px' }}>
-          <button
-            onClick={() => {/* Add scaffolding logic */}}
-            style={{
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            스캐폴딩 추가
-          </button>
-        </div>
-        <div>
-          {scaffoldings.map((scaffolding, index) => (
-            <div key={scaffolding.id} style={{
-              border: '1px solid #e5e7eb',
-              borderRadius: '6px',
-              padding: '12px',
-              marginBottom: '8px'
-            }}>
-              <h4 style={{ margin: '0 0 8px 0' }}>{scaffolding.title}</h4>
-              <p style={{ margin: '0 0 8px 0', color: '#6b7280' }}>
-                순서: {scaffolding.order_index}
-              </p>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={() => {/* Edit scaffolding logic */}}
-                  style={{
-                    background: '#6b7280',
-                    color: 'white',
-                    border: 'none',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px'
-                  }}
-                >
-                  수정
-                </button>
-                <button
-                  onClick={() => {/* Delete scaffolding logic */}}
-                  style={{
-                    background: '#ef4444',
-                    color: 'white',
-                    border: 'none',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px'
-                  }}
-                >
-                  삭제
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-    setShowRightPanel(true)
+    setRightPanelMode('scaffolding')
   }
 
   const closeRightPanel = () => {
-    setShowRightPanel(false)
+    setRightPanelMode(null)
+    setEditingModule(null)
     setSelectedModule(null)
     setScaffoldings([])
-    setRightPanelContent(null)
+    setEditingScaffolding(null)
   }
 
-  const leftPanel = (
-    <div>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '20px'
-      }}>
-        <h2 style={{ margin: 0 }}>모듈 관리</h2>
-        <button
-          onClick={() => {
-            setEditingModule(null)
-            setShowForm(true)
-          }}
-          style={{
-            background: '#3b82f6',
-            color: 'white',
-            border: 'none',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            cursor: 'pointer'
-          }}
-        >
-          모듈 추가
-        </button>
+  const openScaffoldingFormPanel = (scaffolding = null) => {
+    setEditingScaffolding(scaffolding)
+    setRightPanelMode('scaffolding-form')
+  }
+
+  const handleCreateScaffolding = async (scaffoldingData) => {
+    if (!selectedModule) return
+    
+    try {
+      console.log('Creating scaffolding...', scaffoldingData)
+      const response = await api.post(`/admin/modules/${selectedModule.id}/scaffoldings`, scaffoldingData)
+      console.log('Response:', response)
+      console.log('Response data:', response.data)
+      
+      const newScaffolding = response.data.data
+      console.log('New scaffolding:', newScaffolding)
+      
+      if (newScaffolding) {
+        setScaffoldings([...scaffoldings, newScaffolding])
+        console.log('Updated scaffoldings')
+      } else {
+        console.error('No data in response')
+      }
+      
+      setRightPanelMode('scaffolding')
+      setEditingScaffolding(null)
+      console.log('Scaffolding created successfully')
+    } catch (error) {
+      console.error('Failed to create scaffolding:', error)
+      console.error('Error response:', error.response)
+      alert('스캐폴딩 생성 중 오류가 발생했습니다: ' + (error.response?.data?.message || error.message))
+    }
+  }
+
+  const handleUpdateScaffolding = async (scaffoldingId, scaffoldingData) => {
+    try {
+      console.log('Updating scaffolding...', scaffoldingId, scaffoldingData)
+      const response = await api.put(`/admin/scaffoldings/${scaffoldingId}`, scaffoldingData)
+      console.log('Update response:', response.data)
+      const updatedScaffolding = response.data.data
+      if (updatedScaffolding) {
+        setScaffoldings(scaffoldings.map(s => s.id === scaffoldingId ? updatedScaffolding : s))
+      } else {
+        console.error('No data in response')
+      }
+      setRightPanelMode('scaffolding')
+      setEditingScaffolding(null)
+    } catch (error) {
+      console.error('Failed to update scaffolding:', error)
+      console.error('Error response:', error.response)
+      alert('스캐폴딩 수정 중 오류가 발생했습니다: ' + (error.response?.data?.message || error.message))
+    }
+  }
+
+  const handleDeleteScaffolding = async (scaffoldingId) => {
+    if (window.confirm('정말로 이 스캐폴딩을 삭제하시겠습니까?')) {
+      try {
+        await api.delete(`/admin/scaffoldings/${scaffoldingId}`)
+        setScaffoldings(scaffoldings.filter(s => s.id !== scaffoldingId))
+      } catch (error) {
+        console.error('Failed to delete scaffolding:', error)
+        alert('스캐폴딩 삭제 중 오류가 발생했습니다.')
+      }
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">로딩 중...</p>
+        </div>
       </div>
-
-      {showForm && (
-        <ModuleForm
-          module={editingModule}
-          onSubmit={editingModule ? 
-            (data) => handleUpdateModule(editingModule.id, data) :
-            handleCreateModule
-          }
-          onCancel={() => {
-            setShowForm(false)
-            setEditingModule(null)
-          }}
-        />
-      )}
-
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={modules.map(m => m.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {modules.map((module) => (
-              <SortableModuleItem
-                key={module.id}
-                module={module}
-                onEdit={(module) => {
-                  setEditingModule(module)
-                  setShowForm(true)
-                }}
-                onDelete={handleDeleteModule}
-                onManageScaffoldings={openScaffoldingsPanel}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
-    </div>
-  )
+    )
+  }
 
   return (
-    <div style={{ padding: '20px' }}>
-      <TwoColumnLayout
-        leftPanel={leftPanel}
-        rightPanel={null}
-        showRightPanel={showRightPanel}
-        onCloseRightPanel={closeRightPanel}
-        rightPanelTitle={rightPanelTitle}
-        rightPanelContent={rightPanelContent}
-      />
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex gap-6" style={{ minHeight: '600px', maxHeight: '80vh' }}>
+        {/* Left Panel - Module List */}
+        <motion.div 
+          animate={{ 
+            width: rightPanelMode ? '40%' : '100%'
+          }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="flex-shrink-0"
+          style={{ minWidth: rightPanelMode ? '400px' : 'auto' }}
+        >
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold text-gray-800">모듈 관리</h1>
+            <button
+              onClick={() => openFormPanel(null)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-md"
+            >
+              <HiPlus className="text-xl" />
+              모듈 추가
+            </button>
+          </div>
+
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={(modules || []).map(m => m.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-4">
+                {(modules || []).map((module) => (
+                  <SortableModuleItem
+                    key={module.id}
+                    module={module}
+                    onEdit={openFormPanel}
+                    onDelete={handleDeleteModule}
+                    onManageScaffoldings={openScaffoldingsPanel}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+
+          {(!modules || modules.length === 0) && (
+            <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <p className="text-gray-500">등록된 모듈이 없습니다.</p>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Right Panel - Form or Scaffolding Management */}
+        <AnimatePresence mode="wait">
+          {rightPanelMode && (
+            <motion.div
+              key="right-panel"
+              initial={{ opacity: 0, x: 50, scale: 0.95 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 50, scale: 0.95 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="flex-1 bg-white rounded-lg shadow-lg p-6 overflow-y-auto"
+              style={{ minWidth: '350px', maxHeight: '80vh' }}
+            >
+              <div className="flex justify-between items-center mb-4 pb-4 border-b sticky top-0 bg-white z-10">
+                <h2 className="text-xl font-semibold text-gray-800">
+                  {rightPanelMode === 'form' 
+                    ? (editingModule ? '모듈 수정' : '새 모듈 추가')
+                    : rightPanelMode === 'scaffolding-form'
+                    ? (editingScaffolding ? '스캐폴딩 수정' : '새 스캐폴딩 추가')
+                    : `스캐폴딩 관리 - ${selectedModule?.title}`
+                  }
+                </h2>
+                <button
+                  onClick={closeRightPanel}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <HiX className="text-2xl" />
+                </button>
+              </div>
+
+              <AnimatePresence mode="wait">
+                {rightPanelMode === 'form' ? (
+                  <motion.div
+                    key="form-panel"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ModuleForm
+                      module={editingModule}
+                      onSubmit={editingModule 
+                        ? (data) => handleUpdateModule(editingModule.id, data)
+                        : handleCreateModule
+                      }
+                      onCancel={closeRightPanel}
+                    />
+                  </motion.div>
+                ) : rightPanelMode === 'scaffolding-form' ? (
+                  <motion.div
+                    key="scaffolding-form-panel"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ScaffoldingForm
+                      scaffolding={editingScaffolding}
+                      onSubmit={editingScaffolding 
+                        ? (data) => handleUpdateScaffolding(editingScaffolding.id, data)
+                        : handleCreateScaffolding
+                      }
+                      onCancel={() => setRightPanelMode('scaffolding')}
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="scaffolding-panel"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ScaffoldingPanel
+                      scaffoldings={scaffoldings}
+                      module={selectedModule}
+                      onAdd={() => openScaffoldingFormPanel(null)}
+                      onEdit={openScaffoldingFormPanel}
+                      onDelete={handleDeleteScaffolding}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   )
 }
@@ -391,85 +386,59 @@ const SortableModuleItem = ({ module, onEdit, onDelete, onManageScaffoldings }) 
   return (
     <div
       ref={setNodeRef}
-      style={{
-        ...style,
-        border: '1px solid #e5e7eb',
-        borderRadius: '8px',
-        padding: '16px',
-        background: 'white',
-        cursor: 'grab',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}
-      {...attributes}
-      {...listeners}
+      style={style}
+      className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
     >
-      <div style={{ flex: 1 }}>
-        <h3 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>{module.title}</h3>
-        <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
-          {module.description}
-        </p>
-        <div style={{ display: 'flex', gap: '8px', fontSize: '12px', color: '#6b7280' }}>
-          <span>순서: {module.order_index}</span>
-          <span>•</span>
-          <span>모드: {module.scaffolding_mode}</span>
-          <span>•</span>
-          <span>{module.is_active ? '활성' : '비활성'}</span>
+      <div className="flex justify-between items-start">
+        <div className="flex-1" {...attributes} {...listeners}>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">{module.title}</h3>
+          {module.description && (
+            <p className="text-gray-600 text-sm mb-3">{module.description}</p>
+          )}
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+              순서: {module.order_index}
+            </span>
+            <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
+              모드: {module.scaffolding_mode}
+            </span>
+            <span className={`px-2 py-1 rounded ${module.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+              {module.is_active ? '활성' : '비활성'}
+            </span>
+          </div>
         </div>
-      </div>
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onManageScaffoldings(module)
-          }}
-          style={{
-            background: '#10b981',
-            color: 'white',
-            border: 'none',
-            padding: '6px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '12px'
-          }}
-        >
-          스캐폴딩
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onEdit(module)
-          }}
-          style={{
-            background: '#6b7280',
-            color: 'white',
-            border: 'none',
-            padding: '6px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '12px'
-          }}
-        >
-          수정
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete(module.id)
-          }}
-          style={{
-            background: '#ef4444',
-            color: 'white',
-            border: 'none',
-            padding: '6px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '12px'
-          }}
-        >
-          삭제
-        </button>
+        <div className="flex gap-2 ml-4">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onManageScaffoldings(module)
+            }}
+            className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            title="스캐폴딩 관리"
+          >
+            <HiViewList className="text-lg" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit(module)
+            }}
+            className="p-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            title="수정"
+          >
+            <HiPencil className="text-lg" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(module.id)
+            }}
+            className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            title="삭제"
+          >
+            <HiTrash className="text-lg" />
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -502,82 +471,38 @@ const ModuleForm = ({ module, onSubmit, onCancel }) => {
   }
 
   return (
-    <div style={{
-      border: '1px solid #e5e7eb',
-      borderRadius: '8px',
-      padding: '20px',
-      marginBottom: '20px',
-      background: 'white'
-    }}>
-      <h3 style={{ margin: '0 0 16px 0' }}>
-        {module ? '모듈 수정' : '새 모듈 추가'}
-      </h3>
-      <form onSubmit={handleSubmit}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
-              제목 *
-            </label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              required
-              style={{
-                width: '100%',
-                padding: '8px',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '14px'
-              }}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
-              YouTube URL *
-            </label>
-            <input
-              type="url"
-              name="youtube_url"
-              value={formData.youtube_url}
-              onChange={handleChange}
-              required
-              style={{
-                width: '100%',
-                padding: '8px',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '14px'
-              }}
-            />
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
-            학습 모드
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            제목 *
           </label>
-          <select
-            name="scaffolding_mode"
-            value={formData.scaffolding_mode}
+          <input
+            type="text"
+            name="title"
+            value={formData.title}
             onChange={handleChange}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #d1d5db',
-              borderRadius: '4px',
-              fontSize: '14px'
-            }}
-          >
-            <option value="none">없음</option>
-            <option value="prompt">프롬프트</option>
-            <option value="chat">채팅</option>
-          </select>
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
         </div>
 
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            YouTube URL *
+          </label>
+          <input
+            type="url"
+            name="youtube_url"
+            value={formData.youtube_url}
+            onChange={handleChange}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             설명
           </label>
           <textarea
@@ -585,63 +510,69 @@ const ModuleForm = ({ module, onSubmit, onCancel }) => {
             value={formData.description}
             onChange={handleChange}
             rows={3}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #d1d5db',
-              borderRadius: '4px',
-              fontSize: '14px',
-              resize: 'vertical'
-            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            학습 모드
+          </label>
+          <select
+            name="scaffolding_mode"
+            value={formData.scaffolding_mode}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            <option value="none">없음</option>
+            <option value="prompt">프롬프트</option>
+            <option value="chat">채팅</option>
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label className="flex items-center gap-2">
               <input
                 type="checkbox"
                 name="is_active"
                 checked={formData.is_active}
                 onChange={handleChange}
+                className="w-4 h-4 text-primary-600 rounded focus:ring-2 focus:ring-primary-500"
               />
-              <span style={{ fontSize: '14px' }}>활성</span>
+              <span className="text-sm font-medium text-gray-700">활성</span>
             </label>
           </div>
           <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label className="flex items-center gap-2">
               <input
                 type="checkbox"
                 name="learning_enabled"
                 checked={formData.learning_enabled}
                 onChange={handleChange}
+                className="w-4 h-4 text-primary-600 rounded focus:ring-2 focus:ring-primary-500"
               />
-              <span style={{ fontSize: '14px' }}>학습 가능</span>
+              <span className="text-sm font-medium text-gray-700">학습 가능</span>
             </label>
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
-              순서
-            </label>
-            <input
-              type="number"
-              name="order_index"
-              value={formData.order_index}
-              onChange={handleChange}
-              min="0"
-              style={{
-                width: '100%',
-                padding: '8px',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '14px'
-              }}
-            />
           </div>
         </div>
 
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            순서
+          </label>
+          <input
+            type="number"
+            name="order_index"
+            value={formData.order_index}
+            onChange={handleChange}
+            min="0"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             설문 URL
           </label>
           <input
@@ -649,18 +580,12 @@ const ModuleForm = ({ module, onSubmit, onCancel }) => {
             name="survey_url"
             value={formData.survey_url}
             onChange={handleChange}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #d1d5db',
-              borderRadius: '4px',
-              fontSize: '14px'
-            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
         </div>
 
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             도입 텍스트
           </label>
           <textarea
@@ -668,53 +593,164 @@ const ModuleForm = ({ module, onSubmit, onCancel }) => {
             value={formData.intro_text}
             onChange={handleChange}
             rows={3}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #d1d5db',
-              borderRadius: '4px',
-              fontSize: '14px',
-              resize: 'vertical'
-            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
           />
         </div>
+      </div>
 
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-          <button
-            type="button"
-            onClick={onCancel}
-            style={{
-              background: '#6b7280',
-              color: 'white',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            취소
-          </button>
-          <button
-            type="submit"
-            style={{
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            {module ? '수정' : '추가'}
-          </button>
+      <div className="flex gap-3 justify-end pt-4 border-t sticky bottom-0 bg-white">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+        >
+          취소
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          {module ? '수정' : '추가'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+const ScaffoldingPanel = ({ scaffoldings, module, onAdd, onEdit, onDelete }) => {
+  return (
+    <div className="space-y-4">
+      <button
+        onClick={onAdd}
+        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+      >
+        <HiPlus />
+        스캐폴딩 추가
+      </button>
+
+      {scaffoldings.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          등록된 스캐폴딩이 없습니다.
         </div>
-      </form>
+      ) : (
+        (scaffoldings || []).filter(s => s).map((scaffolding) => (
+          <div key={scaffolding.id} className="border rounded-lg p-4 hover:border-primary-300 transition-colors">
+            <h3 className="font-semibold text-gray-800 mb-2">{scaffolding.title}</h3>
+            {scaffolding.prompt_text && (
+              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{scaffolding.prompt_text}</p>
+            )}
+            <p className="text-xs text-gray-500 mb-3">
+              순서: {scaffolding.order_index}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onEdit(scaffolding)}
+                className="flex-1 px-3 py-1.5 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm"
+              >
+                수정
+              </button>
+              <button
+                onClick={() => onDelete(scaffolding.id)}
+                className="flex-1 px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        ))
+      )}
     </div>
   )
 }
 
+const ScaffoldingForm = ({ scaffolding, onSubmit, onCancel }) => {
+  const [formData, setFormData] = useState({
+    title: scaffolding?.title || '',
+    prompt_text: scaffolding?.prompt_text || '',
+    order_index: scaffolding?.order_index || 1
+  })
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    // order_index를 숫자로 변환
+    const submitData = {
+      ...formData,
+      order_index: parseInt(formData.order_index, 10)
+    }
+    console.log('Submitting scaffolding form data:', submitData)
+    onSubmit(submitData)
+  }
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'order_index' ? parseInt(value, 10) || 1 : value
+    }))
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          제목 *
+        </label>
+        <input
+          type="text"
+          name="title"
+          value={formData.title}
+          onChange={handleChange}
+          required
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          프롬프트 텍스트
+        </label>
+        <textarea
+          name="prompt_text"
+          value={formData.prompt_text}
+          onChange={handleChange}
+          rows={6}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+          placeholder="학습자에게 표시할 질문이나 지시사항을 입력하세요"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          순서
+        </label>
+        <input
+          type="number"
+          name="order_index"
+          value={formData.order_index}
+          onChange={handleChange}
+          min="1"
+          required
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        />
+      </div>
+
+      <div className="flex gap-3 justify-end pt-4 border-t">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+        >
+          취소
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        >
+          {scaffolding ? '수정' : '추가'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
 export default AdminModules
-
-
-
-

@@ -41,7 +41,7 @@ export default function AdminSurveys() {
         try {
             setLoading(true)
             const response = await getAllSurveys()
-            setSurveys(response.data || [])
+            setSurveys(response.data.data || [])
             setError(null)
         } catch (err) {
             console.error('설문 목록 로드 실패:', err)
@@ -68,7 +68,7 @@ export default function AdminSurveys() {
     const handleViewStats = async (survey) => {
         try {
             const response = await getSurveyStatistics(survey.id)
-            setStatistics(response.data)
+            setStatistics(response.data.data)
             setSelectedSurvey(survey)
             setShowStatsModal(true)
         } catch (err) {
