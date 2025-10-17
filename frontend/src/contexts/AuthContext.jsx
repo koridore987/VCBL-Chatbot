@@ -32,8 +32,8 @@ export const AuthProvider = ({ children }) => {
   const fetchCurrentUser = async () => {
     try {
       const response = await api.get('/auth/me')
-      setUser(response.data)
-      storage.set('user', response.data)
+      setUser(response.data.data)
+      storage.set('user', response.data.data)
     } catch (error) {
       console.error('Failed to fetch user:', error)
       logout()
@@ -49,7 +49,7 @@ export const AuthProvider = ({ children }) => {
         password
       })
       
-      const { access_token, user } = response.data
+      const { access_token, user } = response.data.data
       
       // storage helper를 사용하여 토큰과 사용자 정보 저장
       storage.set('token', access_token)

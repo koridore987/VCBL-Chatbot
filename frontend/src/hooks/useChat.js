@@ -20,19 +20,19 @@ export const useChat = () => {
     /**
      * 채팅 세션 생성 또는 가져오기
      */
-    const createOrGetSession = useCallback(async (videoId) => {
+    const createOrGetSession = useCallback(async (moduleId) => {
         try {
             setLoading(true)
             setError(null)
 
             const response = await api.post(API_ENDPOINTS.CHAT.SESSIONS, {
-                video_id: videoId
+                module_id: moduleId
             })
 
-            setSession(response.data)
-            setMessages(response.data.messages || [])
+            setSession(response.data.data)
+            setMessages(response.data.data.messages || [])
 
-            return response.data
+            return response.data.data
         } catch (err) {
             const errorMessage = err.userMessage || err.response?.data?.error || '채팅 세션 생성 실패'
             setError(errorMessage)
@@ -64,17 +64,17 @@ export const useChat = () => {
             )
 
             // AI 응답 추가
-            setMessages(prev => [...prev, response.data.message])
+            setMessages(prev => [...prev, response.data.data.message])
 
             // 세션 정보 업데이트
-            if (response.data.session) {
+            if (response.data.data.session) {
                 setSession(prev => ({
                     ...prev,
-                    ...response.data.session
+                    ...response.data.data.session
                 }))
             }
 
-            return response.data
+            return response.data.data
         } catch (err) {
             const errorMessage = err.userMessage || err.response?.data?.error || '메시지 전송 실패'
             setError(errorMessage)

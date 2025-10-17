@@ -48,10 +48,10 @@ export const useModule = () => {
             setError(null)
 
             const response = await api.get(API_ENDPOINTS.MODULES.DETAIL(moduleId))
-            // 백엔드는 success_response(module_data)로 반환 - dict는 merge되므로 직접 접근
-            setCurrentModule(response.data)
+            // 백엔드는 success_response(module_data)로 반환 - data 키 안에 있음
+            setCurrentModule(response.data.data)
 
-            return response.data
+            return response.data.data
         } catch (err) {
             const errorMessage = err.userMessage || err.response?.data?.error || '모듈 정보 조회 실패'
             setError(errorMessage)
@@ -81,7 +81,7 @@ export const useModule = () => {
     const markSurveyCompleted = useCallback(async (moduleId) => {
         try {
             const response = await api.post(`/modules/${moduleId}/survey-complete`)
-            return response.data
+            return response.data.data
         } catch (err) {
             const errorMessage = err.userMessage || err.response?.data?.error || '설문 완료 처리 실패'
             setError(errorMessage)
@@ -95,7 +95,7 @@ export const useModule = () => {
     const completeLearning = useCallback(async (moduleId) => {
         try {
             const response = await api.post(`/modules/${moduleId}/complete`)
-            return response.data
+            return response.data.data
         } catch (err) {
             const errorMessage = err.userMessage || err.response?.data?.error || '학습 완료 처리 실패'
             setError(errorMessage)
