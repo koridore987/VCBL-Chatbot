@@ -15,13 +15,13 @@ class ScaffoldingService:
     """스캐폴딩 관리 서비스"""
     
     @staticmethod
-    def create_scaffolding(video_id: int, title: str, prompt_text: str, 
+    def create_scaffolding(module_id: int, title: str, prompt_text: str, 
                           order_index: Optional[int] = None) -> Tuple[Optional[Scaffolding], Optional[str]]:
         """
         스캐폴딩 생성
         
         Args:
-            video_id: 비디오 ID
+            module_id: 모듈 ID
             title: 제목
             prompt_text: 프롬프트 텍스트
             order_index: 정렬 순서 (None이면 자동으로 마지막 순서 + 1)
@@ -32,20 +32,20 @@ class ScaffoldingService:
         try:
             # order_index가 지정되지 않으면 자동으로 마지막 순서 + 1
             if order_index is None:
-                last_scaffolding = Scaffolding.query.filter_by(video_id=video_id)\
+                last_scaffolding = Scaffolding.query.filter_by(module_id=module_id)\
                     .order_by(Scaffolding.order_index.desc()).first()
                 order_index = (last_scaffolding.order_index + 1) if last_scaffolding else 1
             
             # 중복 순서 방지: 같은 순서가 있으면 그 이후의 모든 질문을 +1씩 밀어냄
-            existing = Scaffolding.query.filter_by(video_id=video_id, order_index=order_index).first()
+            existing = Scaffolding.query.filter_by(module_id=module_id, order_index=order_index).first()
             if existing:
                 Scaffolding.query.filter(
-                    Scaffolding.video_id == video_id,
+                    Scaffolding.module_id == module_id,
                     Scaffolding.order_index >= order_index
                 ).update({Scaffolding.order_index: Scaffolding.order_index + 1})
             
             scaffolding = Scaffolding(
-                video_id=video_id,
+                module_id=module_id,
                 title=title,
                 prompt_text=prompt_text,
                 order_index=order_index

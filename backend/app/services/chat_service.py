@@ -4,7 +4,7 @@
 """
 from app import db
 from app.models.user import User
-from app.models.video import Video
+from app.models.module import Module
 from app.models.chat_session import ChatSession
 from app.models.chat_message import ChatMessage
 from app.models.chat_prompt_template import ChatPromptTemplate
@@ -22,27 +22,27 @@ class ChatService:
     """채팅 관련 서비스"""
     
     @staticmethod
-    def get_or_create_session(user_id: int, video_id: int) -> Tuple[Optional[ChatSession], Optional[str]]:
+    def get_or_create_session(user_id: int, module_id: int) -> Tuple[Optional[ChatSession], Optional[str]]:
         """
         채팅 세션 조회 또는 생성
         
         Args:
             user_id: 사용자 ID
-            video_id: 비디오 ID
+            module_id: 모듈 ID
             
         Returns:
             (session, error): 성공 시 세션 객체, 실패 시 None과 에러 메시지
         """
         try:
             # 비디오 존재 확인
-            video = Video.query.get(video_id)
-            if not video:
-                return None, '비디오를 찾을 수 없습니다'
+            module = Module.query.get(module_id)
+            if not module:
+                return None, '모듈을 찾을 수 없습니다'
             
             # 기존 활성 세션 확인
             existing_session = ChatSession.query.filter_by(
                 user_id=user_id,
-                video_id=video_id,
+                module_id=module_id,
                 is_active=True
             ).first()
             
@@ -52,13 +52,13 @@ class ChatService:
             # 새 세션 생성
             session = ChatSession(
                 user_id=user_id,
-                video_id=video_id
+                module_id=module_id
             )
             
             db.session.add(session)
             db.session.commit()
             
-            logger.info(f"New chat session created: user={user_id}, video={video_id}")
+            logger.info(f"New chat session created: user={user_id}, module={module_id}")
             return session, None
             
         except Exception as e:
@@ -127,7 +127,7 @@ class ChatService:
                 return None, '일일 토큰 한도를 초과했습니다'
             
             # 시스템 프롬프트 및 constraints 가져오기
-            system_prompt, constraints = ChatService._get_system_prompt(session.video_id, user.role)
+            system_prompt, constraints = ChatService._get_system_prompt(session.module_id, user.role)
             
             # OpenAI API 호출
             response_data = openai_service.chat_completion(
@@ -188,7 +188,7 @@ class ChatService:
             return None, f'메시지 전송 중 오류가 발생했습니다: {str(e)}'
     
     @staticmethod
-    def _get_system_prompt(video_id: int = None, user_role: str = None) -> Tuple[str, dict]:
+    def _get_system_prompt(module_id: int = None, user_role: str = None) -> Tuple[str, dict]:
         """
         시스템 프롬프트 및 constraints 가져오기
         

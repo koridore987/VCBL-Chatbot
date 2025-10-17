@@ -1,5 +1,5 @@
 from app.models.user import User
-from app.models.video import Video
+from app.models.module import Module
 from app.models.chat_session import ChatSession
 from app.models.chat_message import ChatMessage
 from app.models.chat_prompt_template import ChatPromptTemplate
@@ -9,7 +9,7 @@ from app.models.learning_progress import LearningProgress
 
 __all__ = [
     'User',
-    'Video',
+    'Module',
     'ChatSession',
     'ChatMessage',
     'ChatPromptTemplate',

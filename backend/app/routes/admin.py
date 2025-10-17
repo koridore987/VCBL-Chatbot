@@ -7,7 +7,7 @@ from flask_jwt_extended import get_jwt_identity
 from app import db
 from app.models.chat_prompt_template import ChatPromptTemplate
 from app.services.user_service import UserService
-from app.services.video_service import VideoService
+from app.services.module_service import ModuleService
 from app.services.scaffolding_service import ScaffoldingService
 from app.services.learning_progress_service import LearningProgressService
 from app.utils import (
@@ -16,7 +16,7 @@ from app.utils import (
 )
 from app.validators import (
     PreRegisterStudentRequest, UpdateUserRoleRequest, UpdateUserStatusRequest, ResetPasswordRequest,
-    CreateVideoRequest, UpdateVideoRequest,
+    CreateModuleRequest, UpdateModuleRequest,
     CreateScaffoldingRequest, UpdateScaffoldingRequest,
     CreatePromptRequest, UpdatePromptRequest
 )
@@ -180,14 +180,14 @@ def reset_user_password(user_id, *, validated_data: ResetPasswordRequest):
     return success_response({'message': '비밀번호가 재설정되었습니다'})
 
 
-# ==================== 비디오 관리 ====================
+# ==================== 모듈 관리 ====================
 
-@admin_bp.route('/videos', methods=['GET'])
+@admin_bp.route('/modules', methods=['GET'])
 @admin_required
-def get_admin_videos(current_user):
-    """관리자용: 모든 비디오 조회 (비활성 포함)"""
-    videos = VideoService.get_all_videos_for_admin()
-    return success_response([video.to_dict() for video in videos])
+def get_admin_modules(current_user):
+    """관리자용: 모든 모듈 조회 (비활성 포함)"""
+    modules = ModuleService.get_all_modules_for_admin()
+    return success_response([module.to_dict() for module in modules])
 
 
 # ==================== 학습 진행 현황 ====================
@@ -206,15 +206,15 @@ def get_learning_progress(current_user):
     })
 
 
-@admin_bp.route('/videos', methods=['POST'])
+@admin_bp.route('/modules', methods=['POST'])
 @admin_required
-@validate_request(CreateVideoRequest)
-def create_video(current_user, *, validated_data: CreateVideoRequest):
-    """비디오 생성"""
-    video, error = VideoService.create_video(
+@validate_request(CreateModuleRequest)
+def create_module(current_user, *, validated_data: CreateModuleRequest):
+    """모듈 생성"""
+    module, error = ModuleService.create_module(
         title=validated_data.title,
         youtube_url=validated_data.youtube_url,
-        youtube_id=validated_data.youtube_id,
+        youtube_id=validated_data.youtube_id,  # 선택사항이므로 None일 수 있음
         description=validated_data.description,
         duration=validated_data.duration,
         thumbnail_url=validated_data.thumbnail_url,
@@ -227,44 +227,44 @@ def create_video(current_user, *, validated_data: CreateVideoRequest):
     if error:
         return error_response(error, 400)
     
-    return success_response(video.to_dict(), status_code=201)
+    return success_response(module.to_dict(), status_code=201)
 
 
-@admin_bp.route('/videos/<int:video_id>', methods=['PUT'])
+@admin_bp.route('/modules/<int:module_id>', methods=['PUT'])
 @admin_required
-@validate_request(UpdateVideoRequest)
-def update_video(current_user, video_id, *, validated_data: UpdateVideoRequest):
-    """비디오 업데이트"""
+@validate_request(UpdateModuleRequest)
+def update_module(current_user, module_id, *, validated_data: UpdateModuleRequest):
+    """모듈 업데이트"""
     update_data = validated_data.model_dump(exclude_none=True)
-    video, error = VideoService.update_video(video_id, **update_data)
+    module, error = ModuleService.update_module(module_id, **update_data)
     
     if error:
         return error_response(error, 404 if '찾을 수 없' in error else 400)
     
-    return success_response(video.to_dict())
+    return success_response(module.to_dict())
 
 
-@admin_bp.route('/videos/<int:video_id>', methods=['DELETE'])
+@admin_bp.route('/modules/<int:module_id>', methods=['DELETE'])
 @admin_required
-def delete_video(current_user, video_id):
-    """비디오 삭제"""
-    success, error = VideoService.delete_video(video_id)
+def delete_module(current_user, module_id):
+    """모듈 삭제"""
+    success, error = ModuleService.delete_module(module_id)
     
     if error:
         return error_response(error, 404 if '찾을 수 없' in error else 400)
     
-    return success_response({'message': '비디오가 삭제되었습니다'})
+    return success_response({'message': '모듈이 삭제되었습니다'})
 
 
 # ==================== 스캐폴딩 관리 ====================
 
-@admin_bp.route('/videos/<int:video_id>/scaffoldings', methods=['POST'])
+@admin_bp.route('/modules/<int:module_id>/scaffoldings', methods=['POST'])
 @admin_required
 @validate_request(CreateScaffoldingRequest)
-def create_scaffolding(current_user, video_id, *, validated_data: CreateScaffoldingRequest):
+def create_scaffolding(current_user, module_id, *, validated_data: CreateScaffoldingRequest):
     """스캐폴딩 생성"""
     scaffolding, error = ScaffoldingService.create_scaffolding(
-        video_id=video_id,
+        module_id=module_id,
         title=validated_data.title,
         prompt_text=validated_data.prompt_text,
         order_index=validated_data.order_index

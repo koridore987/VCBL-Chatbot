@@ -23,7 +23,7 @@ def create_session(*, validated_data: CreateSessionRequest):
     
     session, error = ChatService.get_or_create_session(
         user_id=user_id,
-        video_id=validated_data.video_id
+        module_id=validated_data.video_id
     )
     
     if error:

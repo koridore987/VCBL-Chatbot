@@ -4,7 +4,7 @@ Pydantic을 사용한 요청 데이터 검증
 """
 from .auth_schemas import RegisterRequest, LoginRequest, ChangePasswordRequest
 from .chat_schemas import CreateSessionRequest, SendMessageRequest
-from .video_schemas import CreateVideoRequest, UpdateVideoRequest
+from .module_schemas import CreateModuleRequest, UpdateModuleRequest
 from .scaffolding_schemas import (
     CreateScaffoldingRequest, UpdateScaffoldingRequest, 
     ScaffoldingResponseRequest, BulkScaffoldingResponseRequest
@@ -21,8 +21,8 @@ __all__ = [
     'ChangePasswordRequest',
     'CreateSessionRequest',
     'SendMessageRequest',
-    'CreateVideoRequest',
-    'UpdateVideoRequest',
+    'CreateModuleRequest',
+    'UpdateModuleRequest',
     'CreateScaffoldingRequest',
     'UpdateScaffoldingRequest',
     'ScaffoldingResponseRequest',

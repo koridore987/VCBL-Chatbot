@@ -6,33 +6,33 @@ from sqlalchemy import func
 from app import db
 from app.models.learning_progress import LearningProgress
 from app.models.user import User
-from app.models.video import Video
+from app.models.module import Module
 
 
 class LearningProgressService:
   """사용자별 학습 진행 상황 관리 서비스"""
 
   @staticmethod
-  def _get_progress(user_id: int, video_id: int) -> Optional[LearningProgress]:
-    return LearningProgress.query.filter_by(user_id=user_id, video_id=video_id).first()
+  def _get_progress(user_id: int, module_id: int) -> Optional[LearningProgress]:
+    return LearningProgress.query.filter_by(user_id=user_id, module_id=module_id).first()
 
   @staticmethod
-  def _get_or_create(user_id: int, video_id: int) -> LearningProgress:
-    progress = LearningProgressService._get_progress(user_id, video_id)
+  def _get_or_create(user_id: int, module_id: int) -> LearningProgress:
+    progress = LearningProgressService._get_progress(user_id, module_id)
 
     if progress:
       return progress
 
-    progress = LearningProgress(user_id=user_id, video_id=video_id, status='not_started')
+    progress = LearningProgress(user_id=user_id, module_id=module_id, status='not_started')
     db.session.add(progress)
     db.session.commit()
     return progress
 
   @staticmethod
-  def mark_started(user_id: int, video_id: int) -> None:
+  def mark_started(user_id: int, module_id: int) -> None:
     """학습 시작 기록"""
     now = datetime.utcnow()
-    progress = LearningProgressService._get_or_create(user_id, video_id)
+    progress = LearningProgressService._get_or_create(user_id, module_id)
 
     try:
       if not progress.started_at:
@@ -48,10 +48,10 @@ class LearningProgressService:
       raise
 
   @staticmethod
-  def mark_activity(user_id: int, video_id: int) -> None:
+  def mark_activity(user_id: int, module_id: int) -> None:
     """진행 중 활동 기록"""
     now = datetime.utcnow()
-    progress = LearningProgressService._get_or_create(user_id, video_id)
+    progress = LearningProgressService._get_or_create(user_id, module_id)
 
     try:
       if not progress.started_at:
@@ -67,10 +67,10 @@ class LearningProgressService:
       raise
 
   @staticmethod
-  def mark_survey_completed(user_id: int, video_id: int) -> LearningProgress:
+  def mark_survey_completed(user_id: int, module_id: int) -> LearningProgress:
     """설문 완료 상태 기록"""
     now = datetime.utcnow()
-    progress = LearningProgressService._get_or_create(user_id, video_id)
+    progress = LearningProgressService._get_or_create(user_id, module_id)
 
     try:
       if not progress.started_at:
@@ -89,10 +89,10 @@ class LearningProgressService:
       raise
 
   @staticmethod
-  def mark_completed(user_id: int, video_id: int) -> LearningProgress:
+  def mark_completed(user_id: int, module_id: int) -> LearningProgress:
     """학습 완료 처리"""
     now = datetime.utcnow()
-    progress = LearningProgressService._get_or_create(user_id, video_id)
+    progress = LearningProgressService._get_or_create(user_id, module_id)
 
     try:
       if not progress.started_at:
@@ -109,13 +109,13 @@ class LearningProgressService:
 
   @staticmethod
   def get_progress_map_for_user(user_id: int) -> Dict[int, dict]:
-    """사용자별 비디오 진행 상황"""
+    """사용자별 모듈 진행 상황"""
     entries = LearningProgress.query.filter_by(user_id=user_id).all()
-    return {entry.video_id: entry.to_dict() for entry in entries}
+    return {entry.module_id: entry.to_dict() for entry in entries}
 
   @staticmethod
-  def get_progress(user_id: int, video_id: int) -> Optional[dict]:
-    progress = LearningProgressService._get_progress(user_id, video_id)
+  def get_progress(user_id: int, module_id: int) -> Optional[dict]:
+    progress = LearningProgressService._get_progress(user_id, module_id)
     return progress.to_dict() if progress else None
 
   @staticmethod

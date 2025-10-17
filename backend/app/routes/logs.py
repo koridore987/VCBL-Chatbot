@@ -230,6 +230,73 @@ def get_admin_timeline(current_user):
         return error_response('활동 타임라인 조회 중 오류가 발생했습니다', 500)
 
 
+@logs_bp.route('/token-usage/series', methods=['GET'])
+@admin_required
+def get_token_usage_series(current_user):
+    """날짜별 토큰 사용량 시계열 (옵션: 사용자별 필터)
+    Query params:
+      - user_id: 특정 사용자 ID (선택)
+      - start_date, end_date: ISO8601 (선택, 기본 최근 14일)
+    """
+    try:
+        user_id = request.args.get('user_id', type=int)
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+
+        # 기간 기본값: 최근 14일
+        now = datetime.utcnow()
+        if end_date_str:
+            end_dt = datetime.fromisoformat(end_date_str)
+        else:
+            end_dt = now
+        if start_date_str:
+            start_dt = datetime.fromisoformat(start_date_str)
+        else:
+            start_dt = (end_dt.replace(hour=0, minute=0, second=0, microsecond=0))
+
+        # 집계 쿼리: 일 단위로 합계
+        day_col = db.func.date_trunc('day', ChatMessage.created_at).label('day')
+        query = db.session.query(
+            day_col,
+            db.func.sum(ChatMessage.total_tokens).label('total_tokens'),
+            db.func.sum(ChatMessage.prompt_tokens).label('prompt_tokens'),
+            db.func.sum(ChatMessage.completion_tokens).label('completion_tokens')
+        ).join(
+            ChatSession, ChatMessage.session_id == ChatSession.id
+        ).filter(
+            ChatMessage.created_at >= start_dt,
+            ChatMessage.created_at <= end_dt
+        )
+
+        if user_id:
+            query = query.filter(ChatSession.user_id == user_id)
+
+        rows = query.group_by(day_col).order_by(day_col.asc()).all()
+
+        data = [
+            {
+                'date': row.day.date().isoformat(),
+                'total_tokens': int(row.total_tokens or 0),
+                'prompt_tokens': int(row.prompt_tokens or 0),
+                'completion_tokens': int(row.completion_tokens or 0),
+            }
+            for row in rows
+        ]
+
+        return success_response({
+            'series': data,
+            'filters': {
+                'user_id': user_id,
+                'start_date': start_dt.isoformat(),
+                'end_date': end_dt.isoformat(),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Get token usage series error: {str(e)}")
+        return error_response('토큰 사용량 시계열 조회 중 오류가 발생했습니다', 500)
+
+
 @logs_bp.route('/chat-sessions-grouped', methods=['GET'])
 @admin_required
 def get_chat_sessions_grouped(current_user):
