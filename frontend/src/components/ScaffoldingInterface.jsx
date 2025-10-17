@@ -63,7 +63,7 @@ const ScaffoldingInterface = ({ video, onResponseSaved }) => {
       
       // Save all responses at once
       await api.post(
-        `/videos/${video.id}/scaffoldings/respond-all`,
+        `/modules/${video.id}/scaffoldings/respond-bulk`,
         { responses: responsesToSave }
       )
       

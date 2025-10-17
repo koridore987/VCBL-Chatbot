@@ -2,10 +2,27 @@ import { HiPlay } from 'react-icons/hi'
 import { Link } from 'react-router-dom'
 import { formatters } from '../utils'
 
+const PALETTE = [
+  'from-sky-500 to-indigo-500',
+  'from-emerald-500 to-teal-500',
+  'from-amber-500 to-orange-500',
+  'from-fuchsia-500 to-pink-500',
+  'from-cyan-500 to-blue-500',
+  'from-violet-500 to-purple-500',
+  'from-lime-500 to-green-500',
+  'from-rose-500 to-red-500',
+]
+
+const getAccent = (moduleId) => {
+  if (typeof moduleId !== 'number') return PALETTE[0]
+  return PALETTE[moduleId % PALETTE.length]
+}
+
 const VideoCard = ({ video }) => {
   const progress = video.learning_progress || {}
   const status = progress.status || 'not_started'
   const activityTimestamp = progress.completed_at || progress.last_activity_at || progress.started_at
+  const accent = getAccent(video.id)
 
   const statusMeta = {
     completed: {
@@ -30,7 +47,8 @@ const VideoCard = ({ video }) => {
       to={`/modules/${video.id}`}
       className="group block"
     >
-      <div className="glass-card p-0 overflow-hidden transition-all duration-300">
+      <div className="relative glass-card p-0 overflow-hidden transition-all duration-300 hover:-translate-y-1">
+        <span className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${accent}`} />
         {/* Thumbnail */}
         <div className="relative pb-[56.25%] bg-gradient-to-br from-primary-100 to-accent-100 overflow-hidden">
           {video.thumbnail_url ? (
@@ -61,6 +79,16 @@ const VideoCard = ({ video }) => {
         
         {/* Content */}
         <div className="p-6">
+          <div className="mb-2 flex items-center justify-between">
+            <span className={`inline-flex items-center rounded-full bg-gradient-to-r ${accent} px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm`}>
+              모듈
+            </span>
+            {video.duration ? (
+              <span className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                {formatters.formatDuration(video.duration)}
+              </span>
+            ) : null}
+          </div>
           <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-primary-600 transition-colors">
             {video.title}
           </h3>

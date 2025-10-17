@@ -90,7 +90,7 @@ const LoadingIndicator = memo(() => (
 
 LoadingIndicator.displayName = 'LoadingIndicator'
 
-const ChatInterface = ({ videoId }) => {
+const ChatInterface = ({ moduleId }) => {
   const [input, setInput] = useState('')
   const messagesEndRef = useRef(null)
   
@@ -105,10 +105,10 @@ const ChatInterface = ({ videoId }) => {
   } = useChat()
 
   useEffect(() => {
-    if (videoId) {
-      createOrGetSession(videoId)
+    if (moduleId) {
+      createOrGetSession(moduleId)
     }
-  }, [videoId, createOrGetSession])
+  }, [moduleId, createOrGetSession])
 
   useEffect(() => {
     scrollToBottom()
