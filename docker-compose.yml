@@ -2,7 +2,7 @@
 # VCBL Chatbot - 로컬 전체 테스트용 Docker Compose
 # ============================================
 # 이 파일은 로컬에서 전체 애플리케이션을 테스트하기 위한 것입니다.
-# 로컬 개발은 ./start-backend.sh, ./start-frontend.sh를 사용하세요.
+# 로컬 개발은 ./scripts/dev_setup.sh를 먼저 실행하세요.
 
 services:
   # PostgreSQL 데이터베이스 (로컬 테스트용)
@@ -15,7 +15,7 @@ services:
       POSTGRES_USER: vcbl_user
       POSTGRES_PASSWORD: ${DB_PASSWORD:-vcbl_dev_password}
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
