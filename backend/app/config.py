@@ -37,6 +37,11 @@ def get_database_url():
     # 1. DATABASE_URL이 명시적으로 설정된 경우 사용
     database_url = os.getenv('DATABASE_URL')
     if database_url:
+        # Normalize to psycopg v3 driver if no explicit driver is provided
+        # Accept common forms like postgresql:// or postgres://
+        if database_url.startswith('postgresql://') or database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql+psycopg://', 1)
+            database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
         return database_url
     
     # 2. Cloud SQL 인스턴스 연결 (Unix 소켓 사용)

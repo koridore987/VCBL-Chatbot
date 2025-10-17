@@ -6,7 +6,7 @@ class ChatSession(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
-    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False, index=True)
+    module_id = db.Column(db.Integer, db.ForeignKey('modules.id'), nullable=False, index=True)
     
     # Summary carry-over
     summary = db.Column(db.Text)
@@ -27,7 +27,7 @@ class ChatSession(db.Model):
         data = {
             'id': self.id,
             'user_id': self.user_id,
-            'video_id': self.video_id,
+            'module_id': self.module_id,
             'summary': self.summary,
             'summary_updated_at': self.summary_updated_at.isoformat() if self.summary_updated_at else None,
             'total_tokens': self.total_tokens,

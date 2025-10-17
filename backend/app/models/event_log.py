@@ -6,7 +6,7 @@ class EventLog(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
-    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=True, index=True)
+    module_id = db.Column(db.Integer, db.ForeignKey('modules.id'), nullable=True, index=True)
     
     event_type = db.Column(db.String(50), nullable=False, index=True)  # video_view, video_seek, chat_message, etc.
     event_data = db.Column(db.Text)  # JSON format
@@ -20,7 +20,7 @@ class EventLog(db.Model):
         return {
             'id': self.id,
             'user_id': self.user_id,
-            'video_id': self.video_id,
+            'module_id': self.module_id,
             'event_type': self.event_type,
             'event_data': self.event_data,
             'ip_address': self.ip_address,

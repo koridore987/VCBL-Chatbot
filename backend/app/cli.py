@@ -212,5 +212,114 @@ def init_admin(student_id, name, password):
         sys.exit(0)
 
 
+@cli.command()
+@click.pass_context
+def seed_admin(ctx):
+    """슈퍼/관리자 계정 생성"""
+    from app.models.user import User
+    from app import db
+    
+    try:
+        # 슈퍼 관리자 계정 생성
+        super_admin = User.query.filter_by(student_id='super').first()
+        if not super_admin:
+            super_admin = User(
+                student_id='super',
+                name='Super Administrator',
+                role='super',
+                is_active=True
+            )
+            super_admin.set_password('super1234')
+            db.session.add(super_admin)
+            click.echo("✅ 슈퍼 관리자 계정이 생성되었습니다.")
+        else:
+            click.echo("ℹ️  슈퍼 관리자 계정이 이미 존재합니다.")
+        
+        # 일반 관리자 계정 생성 (선택사항)
+        admin = User.query.filter_by(student_id='admin').first()
+        if not admin:
+            admin = User(
+                student_id='admin',
+                name='Administrator',
+                role='admin',
+                is_active=True
+            )
+            admin.set_password('admin1234')
+            db.session.add(admin)
+            click.echo("✅ 관리자 계정이 생성되었습니다.")
+        else:
+            click.echo("ℹ️  관리자 계정이 이미 존재합니다.")
+        
+        db.session.commit()
+        click.echo("")
+        click.echo("=" * 60)
+        click.echo("계정 정보:")
+        click.echo("=" * 60)
+        click.echo("슈퍼 관리자:")
+        click.echo("  학번: super")
+        click.echo("  비밀번호: super1234")
+        click.echo("")
+        click.echo("관리자:")
+        click.echo("  학번: admin")
+        click.echo("  비밀번호: admin1234")
+        click.echo("=" * 60)
+        
+    except Exception as e:
+        db.session.rollback()
+        click.echo(f"❌ 계정 생성 중 오류가 발생했습니다: {str(e)}")
+        sys.exit(1)
+
+
+@cli.command()
+@click.pass_context
+def seed_sample_modules(ctx):
+    """샘플 모듈 생성 (선택사항)"""
+    from app.models.module import Module
+    from app import db
+    
+    try:
+        # 샘플 모듈 데이터
+        sample_modules = [
+            {
+                'title': '학습 모듈 1: 기초 개념',
+                'youtube_url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                'youtube_id': 'dQw4w9WgXcQ',
+                'description': '기초 개념을 학습하는 첫 번째 모듈입니다.',
+                'scaffolding_mode': 'prompt',
+                'is_active': True,
+                'learning_enabled': True,
+                'order_index': 1,
+                'intro_text': '이 모듈에서는 기초 개념을 학습합니다.'
+            },
+            {
+                'title': '학습 모듈 2: 심화 내용',
+                'youtube_url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                'youtube_id': 'dQw4w9WgXcQ',
+                'description': '심화 내용을 다루는 두 번째 모듈입니다.',
+                'scaffolding_mode': 'chat',
+                'is_active': True,
+                'learning_enabled': True,
+                'order_index': 2,
+                'intro_text': '이 모듈에서는 심화 내용을 학습합니다.'
+            }
+        ]
+        
+        created_count = 0
+        for module_data in sample_modules:
+            existing = Module.query.filter_by(title=module_data['title']).first()
+            if not existing:
+                module = Module(**module_data)
+                db.session.add(module)
+                created_count += 1
+        
+        db.session.commit()
+        click.echo(f"✅ {created_count}개의 샘플 모듈이 생성되었습니다.")
+        
+    except Exception as e:
+        db.session.rollback()
+        click.echo(f"❌ 샘플 모듈 생성 중 오류가 발생했습니다: {str(e)}")
+        sys.exit(1)
+
+
 if __name__ == '__main__':
     cli()

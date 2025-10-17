@@ -77,14 +77,14 @@ def create_app(config_name=None):
     
     # 블루프린트 등록
     from app.routes.auth import auth_bp
-    from app.routes.videos import videos_bp
+    from app.routes.modules import modules_bp
     from app.routes.chat import chat_bp
     from app.routes.admin import admin_bp
     from app.routes.logs import logs_bp
     from app.routes.surveys import surveys_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    app.register_blueprint(videos_bp, url_prefix='/api/videos')
+    app.register_blueprint(modules_bp, url_prefix='/api/modules')
     app.register_blueprint(chat_bp, url_prefix='/api/chat')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(logs_bp, url_prefix='/api/logs')

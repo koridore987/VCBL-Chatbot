@@ -8,7 +8,7 @@ class LearningProgress(db.Model):
 
   id = db.Column(db.Integer, primary_key=True)
   user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
-  video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False, index=True)
+  module_id = db.Column(db.Integer, db.ForeignKey('modules.id'), nullable=False, index=True)
 
   status = db.Column(db.String(20), nullable=False, default='not_started')  # not_started, in_progress, completed
   started_at = db.Column(db.DateTime)
@@ -22,14 +22,14 @@ class LearningProgress(db.Model):
   updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
   __table_args__ = (
-    db.UniqueConstraint('user_id', 'video_id', name='uq_learning_progress_user_video'),
+    db.UniqueConstraint('user_id', 'module_id', name='uq_learning_progress_user_module'),
   )
 
   def to_dict(self):
     return {
       'id': self.id,
       'user_id': self.user_id,
-      'video_id': self.video_id,
+      'module_id': self.module_id,
       'status': self.status,
       'started_at': self.started_at.isoformat() if self.started_at else None,
       'last_activity_at': self.last_activity_at.isoformat() if self.last_activity_at else None,

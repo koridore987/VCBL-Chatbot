@@ -5,7 +5,7 @@ class Scaffolding(db.Model):
     __tablename__ = 'scaffoldings'
     
     id = db.Column(db.Integer, primary_key=True)
-    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False, index=True)
+    module_id = db.Column(db.Integer, db.ForeignKey('modules.id'), nullable=False, index=True)
     
     title = db.Column(db.String(255), nullable=False)
     prompt_text = db.Column(db.Text, nullable=True)  # Allow empty prompt text
@@ -21,7 +21,7 @@ class Scaffolding(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
-            'video_id': self.video_id,
+            'module_id': self.module_id,
             'title': self.title,
             'prompt_text': self.prompt_text,
             'order_index': self.order_index,
