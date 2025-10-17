@@ -20,10 +20,7 @@ def success_response(data: Any = None, message: str = None, status_code: int = 2
         response['message'] = message
     
     if data is not None:
-        if isinstance(data, dict):
-            response.update(data)
-        else:
-            response['data'] = data
+        response['data'] = data
     
     return jsonify(response), status_code
 

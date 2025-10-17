@@ -27,6 +27,7 @@ class CreateModuleRequest(BaseModel):
 
 class UpdateModuleRequest(BaseModel):
     title: Optional[str] = None
+    youtube_url: Optional[str] = None
     description: Optional[str] = None
     scaffolding_mode: Optional[str] = None
     is_active: Optional[bool] = None

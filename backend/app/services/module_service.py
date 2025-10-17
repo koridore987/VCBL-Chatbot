@@ -206,6 +206,21 @@ class ModuleService:
                 if kwargs['scaffolding_mode'] not in valid_modes:
                     return None, f'유효하지 않은 학습 모드입니다. 허용된 값: {", ".join(valid_modes)}'
             
+            # youtube_url이 변경되면 youtube_id와 thumbnail_url도 업데이트
+            if 'youtube_url' in kwargs and kwargs['youtube_url']:
+                youtube_url = kwargs['youtube_url']
+                if not is_valid_youtube_url(youtube_url):
+                    return None, '유효하지 않은 YouTube URL입니다'
+                
+                youtube_id = extract_youtube_id(youtube_url)
+                if not youtube_id:
+                    return None, 'YouTube URL에서 비디오 ID를 추출할 수 없습니다'
+                
+                module.youtube_url = youtube_url
+                module.youtube_id = youtube_id
+                module.thumbnail_url = get_youtube_thumbnail_url(youtube_id)
+                logger.info(f"Updated YouTube URL: {youtube_url}, ID: {youtube_id}")
+            
             # 업데이트 가능한 필드
             allowed_fields = ['title', 'description', 'scaffolding_mode', 'is_active', 'learning_enabled', 'order_index', 'survey_url', 'intro_text']
             for field in allowed_fields:

@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class CreateSessionRequest(BaseModel):
     """채팅 세션 생성 요청 검증"""
-    video_id: int = Field(..., gt=0, description="비디오 ID")
+    module_id: int = Field(..., gt=0, description="모듈 ID")
 
 
 class SendMessageRequest(BaseModel):

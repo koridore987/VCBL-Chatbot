@@ -15,6 +15,26 @@ class ScaffoldingService:
     """스캐폴딩 관리 서비스"""
     
     @staticmethod
+    def get_scaffoldings_by_module(module_id: int) -> list:
+        """
+        특정 모듈의 모든 스캐폴딩 조회
+        
+        Args:
+            module_id: 모듈 ID
+            
+        Returns:
+            list: 스캐폴딩 객체 리스트 (order_index 순으로 정렬)
+        """
+        try:
+            scaffoldings = Scaffolding.query.filter_by(module_id=module_id)\
+                .order_by(Scaffolding.order_index).all()
+            logger.info(f"Fetched {len(scaffoldings)} scaffoldings for module {module_id}")
+            return scaffoldings
+        except Exception as e:
+            logger.error(f"Get scaffoldings error: {str(e)}")
+            return []
+    
+    @staticmethod
     def create_scaffolding(module_id: int, title: str, prompt_text: str, 
                           order_index: Optional[int] = None) -> Tuple[Optional[Scaffolding], Optional[str]]:
         """
@@ -54,7 +74,7 @@ class ScaffoldingService:
             db.session.add(scaffolding)
             db.session.commit()
             
-            logger.info(f"Scaffolding created: {scaffolding.id} for video {video_id} with order {order_index}")
+            logger.info(f"Scaffolding created: {scaffolding.id} for module {module_id} with order {order_index}")
             return scaffolding, None
             
         except Exception as e:
@@ -125,14 +145,14 @@ class ScaffoldingService:
             return False, '스캐폴딩 삭제 중 오류가 발생했습니다'
     
     @staticmethod
-    def save_response(scaffolding_id: int, video_id: int, user_id: int, 
+    def save_response(scaffolding_id: int, module_id: int, user_id: int, 
                      response_text: str) -> Tuple[bool, Optional[str]]:
         """
         스캐폴딩 응답 저장
         
         Args:
             scaffolding_id: 스캐폴딩 ID
-            video_id: 비디오 ID
+            module_id: 모듈 ID
             user_id: 사용자 ID
             response_text: 응답 텍스트
             
@@ -142,7 +162,7 @@ class ScaffoldingService:
         try:
             scaffolding = Scaffolding.query.get(scaffolding_id)
             
-            if not scaffolding or scaffolding.video_id != video_id:
+            if not scaffolding or scaffolding.module_id != module_id:
                 return False, '스캐폴딩을 찾을 수 없습니다'
             
             # 기존 응답 확인
@@ -166,7 +186,7 @@ class ScaffoldingService:
             db.session.commit()
             
             try:
-                LearningProgressService.mark_activity(user_id, video_id)
+                LearningProgressService.mark_activity(user_id, module_id)
             except Exception as e:
                 logger.error(f"Failed to update learning progress after response: {str(e)}")
             
@@ -178,13 +198,13 @@ class ScaffoldingService:
             return False, '응답 저장 중 오류가 발생했습니다'
     
     @staticmethod
-    def save_bulk_responses(video_id: int, user_id: int, 
+    def save_bulk_responses(module_id: int, user_id: int, 
                            responses: list) -> Tuple[bool, Optional[str]]:
         """
         여러 스캐폴딩 응답 일괄 저장
         
         Args:
-            video_id: 비디오 ID
+            module_id: 모듈 ID
             user_id: 사용자 ID
             responses: 응답 리스트 [{'scaffolding_id': int, 'response_text': str}, ...]
             
@@ -192,11 +212,11 @@ class ScaffoldingService:
             (success, error): 성공 여부와 에러 메시지
         """
         try:
-            # 모든 스캐폴딩이 해당 비디오에 속하는지 확인
+            # 모든 스캐폴딩이 해당 모듈에 속하는지 확인
             scaffolding_ids = [r['scaffolding_id'] for r in responses]
             scaffoldings = Scaffolding.query.filter(
                 Scaffolding.id.in_(scaffolding_ids),
-                Scaffolding.video_id == video_id
+                Scaffolding.module_id == module_id
             ).all()
             
             if len(scaffoldings) != len(scaffolding_ids):
@@ -225,10 +245,10 @@ class ScaffoldingService:
             
             db.session.commit()
             try:
-                LearningProgressService.mark_activity(user_id, video_id)
+                LearningProgressService.mark_activity(user_id, module_id)
             except Exception as e:
                 logger.error(f"Failed to update learning progress after bulk responses: {str(e)}")
-            logger.info(f"Bulk scaffolding responses saved for user {user_id}, video {video_id}")
+            logger.info(f"Bulk scaffolding responses saved for user {user_id}, module {module_id}")
             return True, None
             
         except Exception as e:
@@ -237,23 +257,23 @@ class ScaffoldingService:
             return False, '응답 저장 중 오류가 발생했습니다'
     
     @staticmethod
-    def reorder_scaffoldings(video_id: int, reorder_data: list) -> Tuple[bool, Optional[str]]:
+    def reorder_scaffoldings(module_id: int, reorder_data: list) -> Tuple[bool, Optional[str]]:
         """
         스캐폴딩 순서 재정렬
         
         Args:
-            video_id: 비디오 ID
+            module_id: 모듈 ID
             reorder_data: 순서 변경 데이터 [{'id': int, 'order_index': int}, ...]
             
         Returns:
             (success, error): 성공 여부와 에러 메시지
         """
         try:
-            # 모든 스캐폴딩이 해당 비디오에 속하는지 확인
+            # 모든 스캐폴딩이 해당 모듈에 속하는지 확인
             scaffolding_ids = [item['id'] for item in reorder_data]
             scaffoldings = Scaffolding.query.filter(
                 Scaffolding.id.in_(scaffolding_ids),
-                Scaffolding.video_id == video_id
+                Scaffolding.module_id == module_id
             ).all()
             
             if len(scaffoldings) != len(scaffolding_ids):
@@ -269,7 +289,7 @@ class ScaffoldingService:
                     scaffolding.order_index = new_order
             
             db.session.commit()
-            logger.info(f"Scaffoldings reordered for video {video_id}")
+            logger.info(f"Scaffoldings reordered for module {module_id}")
             return True, None
             
         except Exception as e:

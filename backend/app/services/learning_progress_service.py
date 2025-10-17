@@ -131,19 +131,19 @@ class LearningProgressService:
   def get_recent_progress(limit: int = 20) -> List[dict]:
     """최근 업데이트된 학습 진행 내역"""
     rows = (
-      db.session.query(LearningProgress, User, Video)
+      db.session.query(LearningProgress, User, Module)
       .join(User, LearningProgress.user_id == User.id)
-      .join(Video, LearningProgress.video_id == Video.id)
+      .join(Module, LearningProgress.module_id == Module.id)
       .order_by(LearningProgress.updated_at.desc())
       .limit(limit)
       .all()
     )
 
     results = []
-    for progress, user, video in rows:
+    for progress, user, module in rows:
       progress_dict = progress.to_dict()
       progress_dict['user'] = {'id': user.id, 'name': user.name, 'student_id': user.student_id}
-      progress_dict['video'] = {'id': video.id, 'title': video.title}
+      progress_dict['module'] = {'id': module.id, 'title': module.title}
       results.append(progress_dict)
 
     return results
@@ -165,5 +165,5 @@ class LearningProgressService:
       'completed': completed,
       'in_progress': in_progress,
       'latest_activity_at': latest.updated_at.isoformat() if latest else None,
-      'latest_video_id': latest.video_id if latest else None,
+      'latest_module_id': latest.module_id if latest else None,
     }

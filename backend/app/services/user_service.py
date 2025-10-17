@@ -83,15 +83,13 @@ class UserService:
             (user, error): 성공 시 사용자 객체, 실패 시 None과 에러 메시지
         """
         try:
-            from app.constants import SUPER_ADMIN_CREDENTIALS
-            
             user = User.query.get(user_id)
             
             if not user:
                 return None, '사용자를 찾을 수 없습니다'
             
             # Super 관리자는 권한을 변경할 수 없음
-            if user.student_id == SUPER_ADMIN_CREDENTIALS['STUDENT_ID']:
+            if user.role == 'super':
                 return None, 'Super 관리자의 권한은 변경할 수 없습니다'
             
             # Super 역할로의 변경 방지
@@ -122,15 +120,13 @@ class UserService:
             (user, error): 성공 시 사용자 객체, 실패 시 None과 에러 메시지
         """
         try:
-            from app.constants import SUPER_ADMIN_CREDENTIALS
-            
             user = User.query.get(user_id)
             
             if not user:
                 return None, '사용자를 찾을 수 없습니다'
             
             # Super 관리자는 비활성화할 수 없음
-            if user.student_id == SUPER_ADMIN_CREDENTIALS['STUDENT_ID']:
+            if user.role == 'super':
                 return None, 'Super 관리자의 상태는 변경할 수 없습니다'
             
             user.is_active = is_active
@@ -157,15 +153,13 @@ class UserService:
             (success, error): 성공 여부와 에러 메시지
         """
         try:
-            from app.constants import SUPER_ADMIN_CREDENTIALS
-            
             user = User.query.get(user_id)
             
             if not user:
                 return False, '사용자를 찾을 수 없습니다'
             
             # Super 관리자의 비밀번호는 재설정할 수 없음
-            if user.student_id == SUPER_ADMIN_CREDENTIALS['STUDENT_ID']:
+            if user.role == 'super':
                 return False, 'Super 관리자의 비밀번호는 재설정할 수 없습니다'
             
             user.password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
