@@ -35,7 +35,7 @@ admin_bp = Blueprint('admin', __name__)
 @admin_bp.route('/users/pre-register', methods=['POST'])
 @admin_required
 @validate_request(PreRegisterStudentRequest)
-def pre_register_student(*, validated_data: PreRegisterStudentRequest):
+def pre_register_student(current_user, *, validated_data: PreRegisterStudentRequest):
     """학번 사전 등록 (관리자만)"""
     user, error = UserService.pre_register_student(
         student_id=validated_data.student_id,
@@ -51,7 +51,7 @@ def pre_register_student(*, validated_data: PreRegisterStudentRequest):
 
 @admin_bp.route('/users/bulk-register', methods=['POST'])
 @admin_required
-def bulk_register_students():
+def bulk_register_students(current_user):
     """CSV 파일을 통한 학번 대량 등록"""
     if 'file' not in request.files:
         return error_response('파일이 없습니다', 400)
@@ -65,15 +65,59 @@ def bulk_register_students():
         return error_response('CSV 파일만 업로드 가능합니다', 400)
     
     try:
-        # CSV 파일 읽기 (UTF-8 with BOM 지원)
-        stream = io.StringIO(file.stream.read().decode('utf-8-sig'), newline=None)
+        # CSV 파일 읽기 (여러 인코딩 시도)
+        raw_data = file.stream.read()
+        
+        # 여러 인코딩 시도 (한국 환경에서 일반적인 순서)
+        encodings = ['utf-8-sig', 'utf-8', 'cp949', 'euc-kr']
+        stream = None
+        used_encoding = None
+        
+        for encoding in encodings:
+            try:
+                decoded_data = raw_data.decode(encoding)
+                stream = io.StringIO(decoded_data, newline=None)
+                used_encoding = encoding
+                break
+            except (UnicodeDecodeError, AttributeError):
+                continue
+        
+        if stream is None:
+            return error_response(
+                'CSV 파일의 인코딩을 인식할 수 없습니다. UTF-8, CP949, EUC-KR 인코딩 중 하나로 저장된 파일을 사용해주세요.',
+                400
+            )
+        
+        logger.info(f"CSV file successfully decoded with {used_encoding} encoding")
+        
         csv_reader = csv.DictReader(stream)
         
         # 필수 컬럼 확인
         required_columns = ['student_id', 'name']
-        if not all(col in csv_reader.fieldnames for col in required_columns):
+        fieldnames = csv_reader.fieldnames
+        
+        if not fieldnames:
             return error_response(
-                f'CSV 파일에 필수 컬럼이 없습니다. 필수 컬럼: {", ".join(required_columns)}',
+                'CSV 파일이 비어있거나 형식이 올바르지 않습니다.',
+                400
+            )
+        
+        # 컬럼명 로깅
+        logger.info(f"CSV columns found: {fieldnames}")
+        
+        # 컬럼명을 소문자로 정규화하여 비교 (공백 제거)
+        normalized_fieldnames = [col.strip().lower() for col in fieldnames]
+        missing_columns = []
+        for required_col in required_columns:
+            if required_col.lower() not in normalized_fieldnames:
+                missing_columns.append(required_col)
+        
+        if missing_columns:
+            return error_response(
+                f'CSV 파일에 필수 컬럼이 없습니다.\n'
+                f'필요한 컬럼: {", ".join(required_columns)}\n'
+                f'찾은 컬럼: {", ".join(fieldnames)}\n'
+                f'누락된 컬럼: {", ".join(missing_columns)}',
                 400
             )
         
@@ -144,7 +188,7 @@ def get_admin_users(current_user):
 @admin_bp.route('/users/<int:user_id>/role', methods=['PUT'])
 @super_admin_required
 @validate_request(UpdateUserRoleRequest)
-def update_user_role(user_id, *, validated_data: UpdateUserRoleRequest):
+def update_user_role(current_user, user_id, *, validated_data: UpdateUserRoleRequest):
     """사용자 역할 변경"""
     user, error = UserService.update_user_role(user_id, validated_data.role)
     
@@ -157,7 +201,7 @@ def update_user_role(user_id, *, validated_data: UpdateUserRoleRequest):
 @admin_bp.route('/users/<int:user_id>/activate', methods=['PUT'])
 @admin_required
 @validate_request(UpdateUserStatusRequest)
-def toggle_user_activation(user_id, *, validated_data: UpdateUserStatusRequest):
+def toggle_user_activation(current_user, user_id, *, validated_data: UpdateUserStatusRequest):
     """사용자 활성화 상태 변경"""
     user, error = UserService.toggle_user_activation(user_id, validated_data.is_active)
     
@@ -170,7 +214,7 @@ def toggle_user_activation(user_id, *, validated_data: UpdateUserStatusRequest):
 @admin_bp.route('/users/<int:user_id>/reset-password', methods=['POST'])
 @admin_required
 @validate_request(ResetPasswordRequest)
-def reset_user_password(user_id, *, validated_data: ResetPasswordRequest):
+def reset_user_password(current_user, user_id, *, validated_data: ResetPasswordRequest):
     """사용자 비밀번호 재설정"""
     success, error = UserService.reset_user_password(user_id, validated_data.new_password)
     
@@ -258,6 +302,14 @@ def delete_module(current_user, module_id):
 
 # ==================== 스캐폴딩 관리 ====================
 
+@admin_bp.route('/modules/<int:module_id>/scaffoldings', methods=['GET'])
+@admin_required
+def get_module_scaffoldings(current_user, module_id):
+    """특정 모듈의 스캐폴딩 목록 조회"""
+    scaffoldings = ScaffoldingService.get_scaffoldings_by_module(module_id)
+    return success_response([scaffolding.to_dict() for scaffolding in scaffoldings])
+
+
 @admin_bp.route('/modules/<int:module_id>/scaffoldings', methods=['POST'])
 @admin_required
 @validate_request(CreateScaffoldingRequest)
@@ -302,14 +354,14 @@ def delete_scaffolding(current_user, scaffolding_id):
     return success_response({'message': '스캐폴딩이 삭제되었습니다'})
 
 
-@admin_bp.route('/videos/<int:video_id>/scaffoldings/reorder', methods=['PUT'])
+@admin_bp.route('/modules/<int:module_id>/scaffoldings/reorder', methods=['PUT'])
 @admin_required
 @validate_request(ReorderScaffoldingsRequest)
-def reorder_scaffoldings(current_user, video_id, *, validated_data: ReorderScaffoldingsRequest):
+def reorder_scaffoldings(current_user, module_id, *, validated_data: ReorderScaffoldingsRequest):
     """스캐폴딩 순서 재정렬"""
     reorder_data = [{'id': item.id, 'order_index': item.order_index} for item in validated_data.scaffoldings]
     
-    success, error = ScaffoldingService.reorder_scaffoldings(video_id, reorder_data)
+    success, error = ScaffoldingService.reorder_scaffoldings(module_id, reorder_data)
     
     if error:
         return error_response(error, 400)

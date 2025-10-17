@@ -28,7 +28,7 @@ def get_event_logs(current_user):
         per_page = min(request.args.get('per_page', 50, type=int), 100)  # 최대 100개로 제한
         event_type = request.args.get('event_type')
         user_id = request.args.get('user_id', type=int)
-        video_id = request.args.get('video_id', type=int)
+        module_id = request.args.get('module_id', type=int)
         
         query = EventLog.query
         
@@ -37,8 +37,8 @@ def get_event_logs(current_user):
             query = query.filter_by(event_type=event_type)
         if user_id:
             query = query.filter_by(user_id=user_id)
-        if video_id:
-            query = query.filter_by(video_id=video_id)
+        if module_id:
+            query = query.filter_by(module_id=module_id)
         
         query = query.order_by(EventLog.created_at.desc())
         
@@ -64,7 +64,7 @@ def export_event_logs(current_user):
     try:
         event_type = request.args.get('event_type')
         user_id = request.args.get('user_id', type=int)
-        video_id = request.args.get('video_id', type=int)
+        module_id = request.args.get('module_id', type=int)
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
         
@@ -75,8 +75,8 @@ def export_event_logs(current_user):
             query = query.filter_by(event_type=event_type)
         if user_id:
             query = query.filter_by(user_id=user_id)
-        if video_id:
-            query = query.filter_by(video_id=video_id)
+        if module_id:
+            query = query.filter_by(module_id=module_id)
         if start_date:
             query = query.filter(EventLog.created_at >= datetime.fromisoformat(start_date))
         if end_date:
@@ -90,14 +90,14 @@ def export_event_logs(current_user):
         writer = csv.writer(output)
         
         # 헤더
-        writer.writerow(['ID', 'User ID', 'Video ID', 'Event Type', 'Event Data', 'IP Address', 'User Agent', 'Created At'])
+        writer.writerow(['ID', 'User ID', 'Module ID', 'Event Type', 'Event Data', 'IP Address', 'User Agent', 'Created At'])
         
         # 데이터
         for log in logs:
             writer.writerow([
                 log.id,
                 log.user_id,
-                log.video_id,
+                log.module_id,
                 log.event_type,
                 log.event_data,
                 log.ip_address,
@@ -127,7 +127,7 @@ def get_chat_messages(current_user):
         page = request.args.get('page', 1, type=int)
         per_page = min(request.args.get('per_page', 50, type=int), 100)
         user_id = request.args.get('user_id', type=int)
-        video_id = request.args.get('video_id', type=int)
+        module_id = request.args.get('module_id', type=int)
         session_id = request.args.get('session_id', type=int)
         
         query = ChatMessage.query.join(ChatSession)
@@ -135,8 +135,8 @@ def get_chat_messages(current_user):
         # 필터링
         if user_id:
             query = query.filter(ChatSession.user_id == user_id)
-        if video_id:
-            query = query.filter(ChatSession.video_id == video_id)
+        if module_id:
+            query = query.filter(ChatSession.module_id == module_id)
         if session_id:
             query = query.filter(ChatMessage.session_id == session_id)
         
@@ -151,7 +151,7 @@ def get_chat_messages(current_user):
             message_dict = message.to_dict()
             message_dict['session'] = {
                 'user_id': message.session.user_id,
-                'video_id': message.session.video_id
+                'module_id': message.session.module_id
             }
             items.append(message_dict)
         
@@ -175,14 +175,14 @@ def get_admin_timeline(current_user):
         page = request.args.get('page', 1, type=int)
         per_page = min(request.args.get('per_page', 20, type=int), 50)
         user_id = request.args.get('user_id', type=int)
-        video_id = request.args.get('video_id', type=int)
+        module_id = request.args.get('module_id', type=int)
         
         # 채팅 세션 조회
         session_query = ChatSession.query
         if user_id:
             session_query = session_query.filter_by(user_id=user_id)
-        if video_id:
-            session_query = session_query.filter_by(video_id=video_id)
+        if module_id:
+            session_query = session_query.filter_by(module_id=module_id)
         
         session_query = session_query.order_by(ChatSession.updated_at.desc())
         pagination = session_query.paginate(page=page, per_page=per_page, error_out=False)
@@ -200,10 +200,10 @@ def get_admin_timeline(current_user):
                     'student_id': user.student_id
                 }
             
-            # 세션 시간 범위 내의 비디오 이벤트 가져오기
+            # 세션 시간 범위 내의 모듈 이벤트 가져오기
             event_query = EventLog.query.filter(
                 EventLog.user_id == session.user_id,
-                EventLog.video_id == session.video_id,
+                EventLog.module_id == session.module_id,
                 EventLog.event_type != 'chat_message'  # chat_message 제외
             )
             
@@ -214,7 +214,7 @@ def get_admin_timeline(current_user):
                 event_query = event_query.filter(EventLog.created_at <= session.updated_at)
             
             events = event_query.order_by(EventLog.created_at).all()
-            session_dict['video_events'] = [event.to_dict() for event in events]
+            session_dict['module_events'] = [event.to_dict() for event in events]
             
             sessions.append(session_dict)
         
@@ -305,15 +305,15 @@ def get_chat_sessions_grouped(current_user):
         page = request.args.get('page', 1, type=int)
         per_page = min(request.args.get('per_page', 20, type=int), 50)  # 세션 단위이므로 더 적은 수
         user_id = request.args.get('user_id', type=int)
-        video_id = request.args.get('video_id', type=int)
+        module_id = request.args.get('module_id', type=int)
         
         query = ChatSession.query
         
         # 필터링
         if user_id:
             query = query.filter_by(user_id=user_id)
-        if video_id:
-            query = query.filter_by(video_id=video_id)
+        if module_id:
+            query = query.filter_by(module_id=module_id)
         
         # 최근 세션부터
         query = query.order_by(ChatSession.updated_at.desc())
@@ -325,7 +325,7 @@ def get_chat_sessions_grouped(current_user):
         items = []
         for session in pagination.items:
             session_dict = session.to_dict(include_messages=True)
-            # 사용자와 비디오 정보 추가
+            # 사용자와 모듈 정보 추가
             user = User.query.get(session.user_id)
             if user:
                 session_dict['user'] = {
@@ -353,15 +353,15 @@ def export_chat_sessions(current_user):
     """채팅 세션 CSV 내보내기"""
     try:
         user_id = request.args.get('user_id', type=int)
-        video_id = request.args.get('video_id', type=int)
+        module_id = request.args.get('module_id', type=int)
         
         query = ChatSession.query
         
         # 필터링
         if user_id:
             query = query.filter_by(user_id=user_id)
-        if video_id:
-            query = query.filter_by(video_id=video_id)
+        if module_id:
+            query = query.filter_by(module_id=module_id)
         
         # 최대 1000개 세션으로 제한
         sessions = query.order_by(ChatSession.created_at).limit(1000).all()
@@ -372,7 +372,7 @@ def export_chat_sessions(current_user):
         
         # 헤더
         writer.writerow([
-            'Session ID', 'User ID', 'Video ID', 'Message ID', 'Role', 'Content', 
+            'Session ID', 'User ID', 'Module ID', 'Message ID', 'Role', 'Content', 
             'Prompt Tokens', 'Completion Tokens', 'Total Tokens', 'Created At'
         ])
         
@@ -382,7 +382,7 @@ def export_chat_sessions(current_user):
                 writer.writerow([
                     session.id,
                     session.user_id,
-                    session.video_id,
+                    session.module_id,
                     message.id,
                     message.role,
                     message.content,
