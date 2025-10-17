@@ -24,7 +24,7 @@ export default function Survey() {
         try {
             setLoading(true)
             const response = await getRegistrationSurveys()
-            const surveyList = response.data || []
+            const surveyList = response.data.data || []
             setSurveys(surveyList)
 
             // 이미 완료된 설문 체크

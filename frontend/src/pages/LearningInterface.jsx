@@ -6,18 +6,20 @@ import api from '../services/api'
 import { formatters } from '../utils'
 import ChatInterface from '../components/ChatInterface'
 import ScaffoldingInterface from '../components/ScaffoldingInterface'
+import ConfettiCanvas from '../components/ConfettiCanvas'
 import { 
   HiChat, 
   HiClipboardList, 
   HiPlay, 
-  HiCheckCircle, 
   HiAcademicCap,
   HiX,
   HiChevronLeft,
   HiChevronRight,
   HiInformationCircle,
-  HiSparkles
+  HiCheckCircle
 } from 'react-icons/hi'
+
+const CELEBRATION_AUTO_NAVIGATE_MS = 4000
 
 const LearningInterface = () => {
   const { moduleId } = useParams()
@@ -52,7 +54,12 @@ const LearningInterface = () => {
   const fetchModule = async () => {
     try {
       const response = await api.get(`/modules/${moduleId}`)
-      const modulePayload = response.data
+      const modulePayload = response.data?.data || response.data
+
+      if (!modulePayload) {
+        throw new Error('Module payload is empty')
+      }
+
       setVideo(modulePayload)
       
       if (modulePayload.scaffolding_mode === 'prompt') {
@@ -116,7 +123,7 @@ const LearningInterface = () => {
         survey_url: video.survey_url
       })
       
-      const updatedProgress = response.data.learning_progress || response.data?.data?.learning_progress
+      const updatedProgress = response.data?.data?.learning_progress ?? response.data?.learning_progress
       if (updatedProgress) {
         setVideo(prev => {
           if (!prev) return prev
@@ -141,12 +148,16 @@ const LearningInterface = () => {
   }
   
 
-  const handleModuleEvent = (eventType, eventData) => {
+  const handleModuleEvent = (eventType, eventData = {}) => {
     console.log(`Module Event: ${eventType}`, eventData)
     api.post(`/modules/${moduleId}/event`, {
       event_type: eventType,
       event_data: eventData
     }).catch(err => console.error('Failed to log event:', err))
+  }
+
+  const handleVideoEvent = (eventType, eventData = {}) => {
+    handleModuleEvent(eventType, eventData)
   }
 
   const handleFinishLearning = async () => {
@@ -192,12 +203,39 @@ const LearningInterface = () => {
       celebrationTimeoutRef.current = setTimeout(() => {
         setShowCelebration(false)
         navigate('/')
-      }, 2500)
+      }, CELEBRATION_AUTO_NAVIGATE_MS)
     } catch (err) {
       console.error('Failed to complete learning', err)
       alert('학습 종료 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
     } finally {
       setIsFinishing(false)
+    }
+  }
+
+  const stopCelebrationTimer = () => {
+    if (celebrationTimeoutRef.current) {
+      clearTimeout(celebrationTimeoutRef.current)
+      celebrationTimeoutRef.current = null
+    }
+  }
+
+  const navigateHomeFromCelebration = () => {
+    stopCelebrationTimer()
+    setShowCelebration(false)
+    navigate('/')
+  }
+
+  const replayVideoFromCelebration = () => {
+    stopCelebrationTimer()
+    setShowCelebration(false)
+    setCurrentStep(2)
+    if (playerRef.current) {
+      try {
+        playerRef.current.seekTo(0)
+        playerRef.current.pauseVideo()
+      } catch (e) {
+        // ignore
+      }
     }
   }
 
@@ -295,16 +333,13 @@ const LearningInterface = () => {
     },
   }
 
-  const celebrationConfettiOffsets = [
-    { className: '-top-16 -left-10', emoji: '🎉' },
-    { className: '-top-12 right-0', emoji: '🎊' },
-    { className: '-bottom-14 -left-6', emoji: '🎉' },
-    { className: '-bottom-16 right-4', emoji: '🎊' },
-  ]
-
   const showScaffolding = video.scaffolding_mode === 'prompt' || video.scaffolding_mode === 'both'
   const showChat = video.scaffolding_mode === 'chat' || video.scaffolding_mode === 'both'
   const hasRightPanel = showScaffolding || showChat
+  const scaffoldingCompletionPercent = learningProgress.total
+    ? Math.min(100, Math.round((learningProgress.completed / Math.max(1, learningProgress.total)) * 100))
+    : 100
+  const celebrationDurationMs = 2500
 
   const totalSteps = 3
   
@@ -381,41 +416,94 @@ const LearningInterface = () => {
         {showCelebration && (
           <motion.div
             key="celebration-overlay"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <div className="relative">
-              {celebrationConfettiOffsets.map((item, index) => (
-                <motion.span
-                  key={index}
-                  className={`absolute ${item.className} text-3xl drop-shadow-lg`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  {item.emoji}
-                </motion.span>
-              ))}
+            <div className="relative w-full max-w-md">
+              <ConfettiCanvas
+                active={showCelebration}
+                duration={CELEBRATION_AUTO_NAVIGATE_MS}
+                className="pointer-events-none absolute inset-0 h-full w-full"
+              />
               <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
+                initial={{ scale: 0.92, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                className="glass-card text-center px-10 py-8 max-w-md w-full"
+                transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                className="relative glass-card overflow-hidden px-8 py-9 text-center shadow-xl"
               >
                 <motion.div
-                  className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-accent-500 text-white"
-                  animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.08, 1] }}
-                  transition={{ duration: 1.4, repeat: Infinity }}
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 350, damping: 18, delay: 0.05 }}
+                  className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-lg"
                 >
-                  <HiSparkles className="text-3xl" />
+                  <motion.svg
+                    width="44"
+                    height="32"
+                    viewBox="0 0 44 32"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <motion.path
+                      d="M4 17L16 29L40 5"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.6, ease: 'easeInOut' }}
+                    />
+                  </motion.svg>
                 </motion.div>
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">학습 완료!</h3>
-                <p className="text-sm text-gray-600">
-                  잠시 후 홈 화면으로 이동합니다. 수고하셨어요 🎉
-                </p>
+                <motion.h3
+                  className="text-2xl font-bold text-gray-900"
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.15, duration: 0.25 }}
+                >
+                  학습 완료!
+                </motion.h3>
+                <motion.p
+                  className="mt-2 text-sm text-gray-600"
+                  initial={{ y: 12, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.22, duration: 0.25 }}
+                >
+                  축하합니다. 다음 모듈을 선택하거나 방금 학습한 영상을 복습할 수 있어요.
+                </motion.p>
+                <motion.div
+                  className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.32, duration: 0.25 }}
+                >
+                  <button
+                    type="button"
+                    onClick={navigateHomeFromCelebration}
+                    className="inline-flex items-center justify-center rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/70"
+                  >
+                    다음 모듈 살펴보기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={replayVideoFromCelebration}
+                    className="inline-flex items-center justify-center rounded-full border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-200"
+                  >
+                    방금 본 비디오 다시 보기
+                  </button>
+                </motion.div>
+                <motion.p
+                  className="mt-4 text-xs text-gray-400"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.45 }}
+                >
+                  약 {Math.round(CELEBRATION_AUTO_NAVIGATE_MS / 1000)}초 후 자동으로 홈으로 이동합니다.
+                </motion.p>
               </motion.div>
             </div>
           </motion.div>
@@ -798,7 +886,7 @@ const LearningInterface = () => {
                   transition={{ duration: 0.3 }}
                   className="h-full"
                 >
-                  <ChatInterface videoId={videoId} />
+                  <ChatInterface moduleId={video?.id} />
                 </motion.div>
               )}
             </AnimatePresence>
