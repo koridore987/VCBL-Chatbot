@@ -178,8 +178,19 @@ class OpenAIService:
         completion_tokens = response.usage.completion_tokens
         total_tokens = response.usage.total_tokens
         
-        # Calculate cost (gpt-4o-mini pricing: $0.15/$0.60 per 1M tokens)
-        cost = (prompt_tokens / 1_000_000 * 0.15) + (completion_tokens / 1_000_000 * 0.60)
+        # Calculate cost based on model (OpenAI official pricing)
+        if 'gpt-4.1-mini' in self.model_name:
+            # GPT-4.1-mini Standard pricing: $0.40/$1.60 per 1M tokens
+            cost = (prompt_tokens / 1_000_000 * 0.40) + (completion_tokens / 1_000_000 * 1.60)
+        elif 'gpt-4o-mini' in self.model_name:
+            # GPT-4o-mini Standard pricing: $0.15/$0.60 per 1M tokens
+            cost = (prompt_tokens / 1_000_000 * 0.15) + (completion_tokens / 1_000_000 * 0.60)
+        elif 'gpt-4.1' in self.model_name:
+            # GPT-4.1 Standard pricing: $2.00/$8.00 per 1M tokens
+            cost = (prompt_tokens / 1_000_000 * 2.00) + (completion_tokens / 1_000_000 * 8.00)
+        else:
+            # Default to GPT-4o-mini pricing for unknown models
+            cost = (prompt_tokens / 1_000_000 * 0.15) + (completion_tokens / 1_000_000 * 0.60)
         
         return {
             'content': assistant_message,

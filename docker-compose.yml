@@ -1,5 +1,11 @@
+# ============================================
+# VCBL Chatbot - 로컬 전체 테스트용 Docker Compose
+# ============================================
+# 이 파일은 로컬에서 전체 애플리케이션을 테스트하기 위한 것입니다.
+# 로컬 개발은 ./start-backend.sh, ./start-frontend.sh를 사용하세요.
+
 services:
-  # PostgreSQL 데이터베이스 (로컬 개발 권장)
+  # PostgreSQL 데이터베이스 (로컬 테스트용)
   db:
     image: postgres:15-alpine
     container_name: vcbl-postgres
@@ -18,7 +24,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis (Rate Limiting용 - 선택사항)
+  # Redis (Rate Limiting용 - 로컬 테스트용)
   redis:
     image: redis:7-alpine
     container_name: vcbl-redis
@@ -33,7 +39,7 @@ services:
       timeout: 3s
       retries: 5
 
-  # 애플리케이션
+  # 애플리케이션 (로컬 전체 테스트용)
   app:
     build:
       context: .
@@ -52,9 +58,9 @@ services:
       # Redis 연결 (선택사항)
       REDIS_URL: redis://redis:6379/0
       
-      # 보안 (개발 환경용 - 프로덕션에서는 강력한 키 사용)
-      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-jwt-secret-key-change-in-production}
+      # 보안 (로컬 테스트용 - 실제 배포는 Secret Manager 사용)
+      SECRET_KEY: ${SECRET_KEY:-test-secret-key-for-local-testing}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-test-jwt-secret-key-for-local-testing}
       
       # OpenAI
       OPENAI_API_KEY: ${OPENAI_API_KEY}

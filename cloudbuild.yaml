@@ -1,5 +1,6 @@
 # Cloud Build configuration for automatic deployment to Cloud Run
-# Triggered by pushing to the main/master branch or manually
+# 프로덕션 배포용 - Secret Manager에서 민감한 정보를 가져옵니다
+# 로컬 개발은 docker-compose.yml을 사용하세요
 
 steps:
   # Step 1: Build the Docker image
@@ -49,11 +50,11 @@ steps:
       - '--max-instances'
       - '${_MAX_INSTANCES}'
       - '--set-env-vars'
-      - 'FLASK_ENV=production,PORT=8080,INIT_ADMIN_ON_START=true,ADMIN_STUDENT_ID=9999000001,ADMIN_NAME=Super Administrator,ADMIN_PASSWORD:ADMIN_PASSWORD:latest'
+      - 'FLASK_ENV=production,PORT=8080,INIT_ADMIN_ON_START=true,ADMIN_STUDENT_ID=9999000001,ADMIN_NAME=Super Administrator'
       - '--add-cloudsql-instances'
       - '${_CLOUD_SQL_INSTANCE}'
       - '--set-secrets'
-      - 'SECRET_KEY=SECRET_KEY:latest,JWT_SECRET_KEY=JWT_SECRET_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,DATABASE_URL=DATABASE_URL:latest'
+      - 'SECRET_KEY=SECRET_KEY:latest,JWT_SECRET_KEY=JWT_SECRET_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,DATABASE_URL=DATABASE_URL:latest,ADMIN_PASSWORD=ADMIN_PASSWORD:latest'
     id: 'deploy-cloud-run'
 
 # Substitution variables (can be overridden in trigger settings)

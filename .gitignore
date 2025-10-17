@@ -13,6 +13,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
 
 # Virtual environments
 venv/
@@ -21,6 +27,8 @@ env/
 ENV/
 env.bak/
 venv.bak/
+.venv/
+venv/
 
 # Distribution / packaging
 .Python
@@ -127,7 +135,6 @@ dev_guides/
 dev/
 *.md.backup
 README-*.md
-QUICKSTART.md
 
 # ===================================
 # Config Examples

@@ -1,6 +1,7 @@
 """
 애플리케이션 설정 관리
-환경별 설정을 분리하여 관리합니다.
+- 로컬 개발: .env 파일 사용
+- 프로덕션: Google Cloud Secret Manager 사용
 """
 import os
 from datetime import timedelta
@@ -17,7 +18,7 @@ def get_ratelimit_storage_url(require_distributed: bool = False) -> str:
 
     if require_distributed and url.startswith('memory://'):
         raise ValueError(
-            "Production 환경에서는 분산 Rate Limiting을 위해 RATELIMIT_STORAGE_URL "
+            "프로덕션 환경에서는 분산 Rate Limiting을 위해 RATELIMIT_STORAGE_URL "
             "또는 REDIS_URL 환경 변수를 Redis와 같은 외부 저장소로 설정해야 합니다."
         )
 
@@ -61,8 +62,8 @@ def get_database_url():
     # 3. 기본 연결이 명시되지 않은 경우 오류 발생
     raise ValueError(
         "DATABASE_URL 환경 변수가 설정되지 않았습니다. "
-        "로컬 개발과 프로덕션 모두 PostgreSQL을 사용하므로 반드시 설정해야 합니다. "
-        "docker-compose 를 사용하는 경우에는 compose 파일에서 주입되는 값을 확인하세요."
+        "로컬 개발: docker-compose.yml에서 자동 주입, "
+        "프로덕션: Secret Manager에서 주입되어야 합니다."
     )
 
 
@@ -94,7 +95,7 @@ class Config:
     JWT_HEADER_NAME = 'Authorization'
     JWT_HEADER_TYPE = 'Bearer'
     
-    # CORS 설정 (개발 편의를 위해 5173, 3000 모두 기본 허용)
+    # CORS 설정 (로컬 개발용 기본값)
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:5173,http://localhost:3000').split(',')
     CORS_SUPPORTS_CREDENTIALS = True
     
